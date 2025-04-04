@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moon Buggy 2025 - A homage to Moon Patrol</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #eee;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #f5f5f5;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        #moon-buggy-container {
+            width: 800px;
+            max-width: 100%;
+            margin: 0 auto;
+            position: relative;
+        }
+        #moon-buggy-canvas {
+            border: 2px solid #555;
+            background-color: #000;
+            display: block;
+            margin: 0 auto;
+        }
+        #game-controls {
+            display: flex;
+            justify-content: space-between;
+            max-width: 300px;
+            margin: 20px auto;
+        }
+        #game-controls button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #game-controls button:hover {
+            background-color: #666;
+        }
+        .instructions {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: rgba(50, 50, 50, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Moon Buggy 2025</h1>
+    <p>A homage to the classic Moon Patrol game</p>
+    
+    <div id="moon-buggy-container">
+        <canvas id="moon-buggy-canvas"></canvas>
+        <div id="game-controls">
+            <button id="jump-button">JUMP</button>
+            <button id="shoot-button">SHOOT</button>
+        </div>
+    </div>
+    
+    <div class="instructions">
+        <p>Use <strong>SPACE</strong> to jump or the JUMP button. <strong>Z</strong> key or SHOOT button to fire.</p>
+        <p>Avoid obstacles and survive as long as possible!</p>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('moon-buggy-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = 800;
+            canvas.height = 400;
+            
+            // Game variables
+            let gameRunning = true;
+            let groundY = canvas.height - 50;
+            let scrollSpeed = 3;
+            let frameCount = 0;
+            let lastFrameTime = Date.now();
+            
+            // Player variables
+            const player = {
+                x: 150,
+                y: groundY - 30,
+                width: 60,
+                height: 30,
+                jumping: false,
+                jumpHeight: 120,
+                jumpSpeed: 5,
+                jumpVelocity: 0,
+                gravity: 0.5,
+                shooting: false,
+                bullets: []
+            };
+            
+            // Mountain layers for parallax effect
+            const mountainLayers = [
+                {
+                    points: generateMountainPoints(canvas.width * 2, 200, 0.4), // Higher back mountains
+                    speed: 0.3, // Far mountains move slowest
+                    color: '#666' // Lighter color for distant mountains
+                },
+                {
+                    points: generateMountainPoints(canvas.width * 2, 130, 0.7), // Lower front mountains
+                    speed: 0.6, // Middle mountains move at medium speed
+                    color: '#444' // Darker color for closer mountains
+                }
+            ];
+            
+            // Obstacles
+            let obstacles = [
+                {
+                    x: canvas.width,
+                    y: groundY,
+                    width: 40,
+                    height: 20,
+                    type: 'crater'
+                }
+            ];
+            
+            // Generate random mountain points
+            function generateMountainPoints(width, height, roughness) {
+                const points = [];
+                const segments = 40; // More segments for smoother mountains
+                const segmentWidth = width / segments;
+                
+                // Generate mountain points
+                let lastY = groundY - height * 0.7;
+                
+                for (let i = 0; i <= segments; i++) {
+                    const x = i * segmentWidth;
+                    
+                    // Create smoother transitions between points
+                    const variation = (Math.random() - 0.5) * height * roughness * 0.3;
+                    const y = Math.max(groundY - height * 0.7, 
+                                     Math.min(groundY - height * 0.3, lastY + variation));
+                    
+                    points.push({ x, y });
+                    lastY = y;
+                }
+                
+                // Ensure true seamless wrapping by making the start and end connect perfectly
+                // We need the same Y values for the first and last few points to create a seamless join
+                const firstPoint = points[0];
+                const lastPoint = points[segments];
+                
+                // Match the first point to the last point
+                firstPoint.y = lastPoint.y;
+                
+                // Gradual transition for the first few and last few points
+                const transitionPoints = 5;
+                for (let i = 1; i < transitionPoints; i++) {
+                    const ratio = i / transitionPoints;
+                    const startPoint = points[i];
+                    const endPoint = points[segments - i];
+                    
+                    // Create a smooth transition at the seam where the mountain pattern repeats
+                    const blendedY = lastPoint.y + ratio * (startPoint.y - lastPoint.y);
+                    startPoint.y = blendedY;
+                    points[segments - i].y = firstPoint.y + ratio * (endPoint.y - firstPoint.y);
+                }
+                
+                return points;
+            }
+            
+            // Handle key events
+            document.addEventListener('keydown', function(e) {
+                if (e.code === 'Space' && !player.jumping) {
+                    startJump();
+                }
+                if (e.code === 'KeyZ') {
+                    startShooting();
+                }
+            });
+            
+            // Handle button clicks
+            document.getElementById('jump-button').addEventListener('click', function() {
+                if (!player.jumping) {
+                    startJump();
+                }
+            });
+            
+            document.getElementById('shoot-button').addEventListener('click', function() {
+                startShooting();
+            });
+            
+            // Start jump
+            function startJump() {
+                player.jumping = true;
+                player.jumpVelocity = -player.jumpSpeed;
+            }
+            
+            // Start shooting
+            function startShooting() {
+                player.shooting = true;
+                
+                // Create a new bullet
+                player.bullets.push({
+                    x: player.x + player.width - 5,
+                    y: player.y - 5,
+                    width: 5,
+                    height: 2,
+                    speed: 8
+                });
+                
+                // Reset shooting flag after a delay
+                setTimeout(() => {
+                    player.shooting = false;
+                }, 200);
+            }
+            
+            // Update player jump
+            function updatePlayerJump() {
+                if (player.jumping) {
+                    player.y += player.jumpVelocity;
+                    player.jumpVelocity += player.gravity;
+                    
+                    if (player.y >= groundY - player.height) {
+                        player.y = groundY - player.height;
+                        player.jumping = false;
+                        player.jumpVelocity = 0;
+                    }
+                }
+            }
+            
+            // Update bullets
+            function updateBullets() {
+                for (let i = 0; i < player.bullets.length; i++) {
+                    player.bullets[i].x += player.bullets[i].speed;
+                    
+                    // Remove bullets that are offscreen
+                    if (player.bullets[i].x > canvas.width) {
+                        player.bullets.splice(i, 1);
+                        i--;
+                    }
+                }
+            }
+            
+            // Helper function to get a value based on time
+            // Useful for smooth animations and avoiding frame rate dependencies
+            function getTimeValue(speed = 1) {
+                return (Date.now() * speed) % 1000 / 1000;
+            }
+            
+            // Move obstacles - ground layer moves fastest (full speed)
+            function moveObstacles() {
+                for (let i = 0; i < obstacles.length; i++) {
+                    obstacles[i].x -= scrollSpeed; // Ground obstacles move at full speed
+                    
+                    // Remove obstacles that are offscreen
+                    if (obstacles[i].x + obstacles[i].width < 0) {
+                        obstacles.splice(i, 1);
+                        i--;
+                    }
+                }
+                
+                // Add new obstacle randomly
+                if (Math.random() < 0.01 && obstacles.length < 3) {
+                    obstacles.push({
+                        x: canvas.width,
+                        y: groundY,
+                        width: 40,
+                        height: 20,
+                        type: Math.random() < 0.5 ? 'crater' : 'rock'
+                    });
+                }
+            }
+            
+            // Check collisions
+            function checkCollisions() {
+                // Check player collision with obstacles
+                for (let obstacle of obstacles) {
+                    if (player.x < obstacle.x + obstacle.width &&
+                        player.x + player.width > obstacle.x &&
+                        player.y < obstacle.y + obstacle.height &&
+                        player.y + player.height > obstacle.y) {
+                            
+                        // Collision detected!
+                        gameRunning = false;
+                        setTimeout(() => {
+                            alert('Game Over! Refresh to try again.');
+                        }, 100);
+                    }
+                }
+                
+                // Check bullet collision with obstacles
+                for (let i = 0; i < player.bullets.length; i++) {
+                    let bullet = player.bullets[i];
+                    
+                    for (let j = 0; j < obstacles.length; j++) {
+                        let obstacle = obstacles[j];
+                        
+                        if (obstacle.type === 'rock' && 
+                            bullet.x < obstacle.x + obstacle.width &&
+                            bullet.x + bullet.width > obstacle.x &&
+                            bullet.y < obstacle.y + obstacle.height &&
+                            bullet.y + bullet.height > obstacle.y) {
+                                
+                            // Bullet hit a rock obstacle
+                            player.bullets.splice(i, 1);
+                            obstacles.splice(j, 1);
+                            i--;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Draw mountain layers with parallax effect
+            function drawMountains() {
+                // Clear the entire mountain section first
+                ctx.fillStyle = '#000'; // Black background for sky
+                ctx.fillRect(0, 0, canvas.width, groundY);
+                
+                // Add stars to the background
+                drawStars();
+                
+                // Draw mountains from back to front
+                mountainLayers.forEach((layer, index) => {
+                    // Calculate the offset based on layer's speed and ensure it's modulo the exact width
+                    const totalWidth = layer.points.length * (canvas.width / 40);
+                    const offset = (scrollSpeed * layer.speed * frameCount) % totalWidth;
+                    
+                    // Set the mountain color
+                    ctx.fillStyle = layer.color;
+                    
+                    // Draw the main mountain layer
+                    ctx.beginPath();
+                    ctx.moveTo(0, groundY);
+                    
+                    // Find the starting index for our current view
+                    const pointsPerWidth = layer.points.length - 1; // -1 because last point = first point
+                    const pointWidth = totalWidth / pointsPerWidth;
+                    const startIndex = Math.floor(offset / pointWidth);
+                    const startOffset = offset % pointWidth;
+                    
+                    // Function to get Y value at a specific X position with interpolation
+                    const getYValue = (idx, xPos) => {
+                        const index = Math.floor(idx) % pointsPerWidth;
+                        const nextIndex = (index + 1) % pointsPerWidth;
+                        const ratio = idx - Math.floor(idx);
+                        
+                        const point1 = layer.points[index];
+                        const point2 = layer.points[nextIndex];
+                        
+                        return point1.y + ratio * (point2.y - point1.y);
+                    };
+                    
+                    // Draw from left edge to right edge with proper point sampling
+                    const totalXPoints = Math.ceil(canvas.width / pointWidth) + 2; // +2 for safety
+                    
+                    for (let i = 0; i <= totalXPoints; i++) {
+                        const xRatio = i / totalXPoints;
+                        const x = xRatio * canvas.width;
+                        const pointIndex = startIndex + (i * pointsPerWidth / totalXPoints);
+                        const y = getYValue(pointIndex, x);
+                        
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    // Close path to ground
+                    ctx.lineTo(canvas.width, groundY);
+                    ctx.closePath();
+                    ctx.fill();
+                });
+            }
+            
+            // Draw player
+            function drawPlayer() {
+                // Draw buggy body
+                ctx.fillStyle = '#f44';
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+                
+                // Draw wheels
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(player.x + 15, player.y + player.height, 8, 0, Math.PI * 2);
+                ctx.arc(player.x + player.width - 15, player.y + player.height, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw gun
+                ctx.fillStyle = '#888';
+                ctx.fillRect(player.x + player.width - 10, player.y - 10, 5, 10);
+                
+                // Draw bullets
+                ctx.fillStyle = '#ff0';
+                for (const bullet of player.bullets) {
+                    ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                }
+            }
+            
+            // Draw obstacles
+            function drawObstacles() {
+                for (const obstacle of obstacles) {
+                    if (obstacle.type === 'crater') {
+                        ctx.fillStyle = '#000';
+                        ctx.beginPath();
+                        ctx.arc(obstacle.x + obstacle.width / 2, obstacle.y, obstacle.width / 2, 0, Math.PI);
+                        ctx.fill();
+                    } else if (obstacle.type === 'rock') {
+                        ctx.fillStyle = '#555';
+                        ctx.beginPath();
+                        ctx.moveTo(obstacle.x, obstacle.y);
+                        ctx.lineTo(obstacle.x + obstacle.width, obstacle.y);
+                        ctx.lineTo(obstacle.x + obstacle.width / 2, obstacle.y - obstacle.height);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            // Draw ground
+            function drawGround() {
+                ctx.fillStyle = '#998';
+                ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+            }
+            
+            // Draw stars in background
+            function drawStars() {
+                ctx.fillStyle = '#fff';
+                // Generate static stars
+                if (!window.stars) {
+                    window.stars = [];
+                    for (let i = 0; i < 100; i++) {
+                        window.stars.push({
+                            x: Math.random() * canvas.width,
+                            y: Math.random() * (groundY - 50),
+                            size: Math.random() * 2
+                        });
+                    }
+                }
+                
+                // Draw stars
+                for (const star of window.stars) {
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Game loop
+            function gameLoop() {
+                if (!gameRunning) return;
+                
+                // Calculate time delta for consistent animations
+                const currentTime = Date.now();
+                const deltaTime = (currentTime - lastFrameTime) / (1000 / 60); // normalize to 60fps
+                lastFrameTime = currentTime;
+                
+                // Increment frame counter based on time delta for smoother animation
+                frameCount += deltaTime;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Update game state
+                updatePlayerJump();
+                updateBullets();
+                moveObstacles();
+                checkCollisions();
+                
+                // Draw game elements in proper order (back to front)
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Mountains includes stars (see drawMountains function)
+                drawMountains(); // Mountains with parallax
+                
+                // Ground and foreground elements
+                drawGround();
+                drawObstacles();
+                drawPlayer();
+                
+                // Continue game loop
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // Start game
+            gameLoop();
+        });
+    </script>
+</body>
+</html>
