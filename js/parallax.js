@@ -15,7 +15,7 @@ class ParallaxManager {
         
         // Generate mountains with increased height for back mountains
         this.frontMountains = this.generateMountainRange(36, 100, 150, 0.8);
-        this.backMountains = this.generateMountainRange(24, 80, 140, 0.6); // Increased min/max height
+        this.backMountains = this.generateMountainRange(24, 120, 180, 0.6); // Taller back mountains
     }
     
     generateStars() {
@@ -169,8 +169,16 @@ class ParallaxManager {
         const backMountainWave = Math.sin(levelProgress * 0.05) * 10;
         const frontMountainWave = Math.sin(levelProgress * 0.08) * 15;
         
-        // Draw back mountains (far parallax)
-        this.ctx.fillStyle = '#444444';
+        // Draw back mountains (far parallax) - make them more bluish
+        // Create gradient for back mountains for better separation
+        const backGradient = this.ctx.createLinearGradient(
+            0, GAME_HEIGHT - GROUND_HEIGHT - 180, 
+            0, GAME_HEIGHT - GROUND_HEIGHT
+        );
+        backGradient.addColorStop(0, '#444466'); // Slightly blue at the top
+        backGradient.addColorStop(1, '#333344'); // Darker blue-gray at the bottom
+        
+        this.ctx.fillStyle = backGradient;
         this.ctx.beginPath();
         this.ctx.moveTo(0, GAME_HEIGHT - GROUND_HEIGHT);
         
@@ -189,24 +197,23 @@ class ParallaxManager {
         
         // Ensure we have points to draw
         if (drawnPoints === 0) {
-            this.ctx.lineTo(0, GAME_HEIGHT - GROUND_HEIGHT - 50 + backMountainWave);
-            this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT - 50 + backMountainWave);
+            this.ctx.lineTo(0, GAME_HEIGHT - GROUND_HEIGHT - 100 + backMountainWave);
+            this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT - 100 + backMountainWave);
         }
         
         this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT);
         this.ctx.closePath();
         this.ctx.fill();
         
-        // Add subtle shading to the mountains
-        const backGradient = this.ctx.createLinearGradient(
-            0, GAME_HEIGHT - GROUND_HEIGHT - 100, 
+        // Draw front mountains (near parallax)
+        const frontGradient = this.ctx.createLinearGradient(
+            0, GAME_HEIGHT - GROUND_HEIGHT - 150, 
             0, GAME_HEIGHT - GROUND_HEIGHT
         );
-        backGradient.addColorStop(0, '#444444'); // Lighter at the top
-        backGradient.addColorStop(1, '#333333'); // Darker at the bottom
+        frontGradient.addColorStop(0, '#666666'); // Lighter gray at the top
+        frontGradient.addColorStop(1, '#444444'); // Darker gray at the bottom
         
-        // Draw front mountains (near parallax)
-        this.ctx.fillStyle = '#666666';
+        this.ctx.fillStyle = frontGradient;
         this.ctx.beginPath();
         this.ctx.moveTo(0, GAME_HEIGHT - GROUND_HEIGHT);
         
@@ -231,16 +238,6 @@ class ParallaxManager {
         
         this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT);
         this.ctx.closePath();
-        
-        // Add gradient to front mountains for depth
-        const frontGradient = this.ctx.createLinearGradient(
-            0, GAME_HEIGHT - GROUND_HEIGHT - 150, 
-            0, GAME_HEIGHT - GROUND_HEIGHT
-        );
-        frontGradient.addColorStop(0, '#777777'); // Lighter at the top
-        frontGradient.addColorStop(1, '#555555'); // Darker at the bottom
-        
-        this.ctx.fillStyle = frontGradient;
         this.ctx.fill();
     }
 }

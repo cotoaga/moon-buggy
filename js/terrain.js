@@ -214,7 +214,7 @@ class TerrainManager {
         const scrollOffset = (this.levelProgress / 100) * (this.sectionWidth * this.levelLength);
         
         // Draw base ground
-        this.ctx.fillStyle = '#555555';
+        this.ctx.fillStyle = '#333333'; // Darker ground color for better contrast with mountains
         this.ctx.fillRect(0, GAME_HEIGHT - GROUND_HEIGHT, GAME_WIDTH, GROUND_HEIGHT);
         
         // Draw ground features
@@ -341,11 +341,11 @@ class TerrainManager {
                 );
                 this.ctx.fill();
             } else if (obstacle.type === OBSTACLE_TYPES.CRATER) {
-                // Draw small crater obstacles
+                // Draw small crater obstacles (similar to ground craters but smaller)
                 obstacle.width = Math.max(obstacle.width, 30); // Ensure craters are visible
                 
-                // Main crater
-                this.ctx.fillStyle = '#111111';
+                // Main crater bowl
+                this.ctx.fillStyle = '#1A1A1A';
                 this.ctx.beginPath();
                 this.ctx.arc(
                     obstacle.x + obstacle.width/2, 
@@ -355,8 +355,8 @@ class TerrainManager {
                 );
                 this.ctx.fill();
                 
-                // Inner crater
-                this.ctx.fillStyle = '#0A0A0A';
+                // Inner crater (deeper part)
+                this.ctx.fillStyle = '#0F0F0F';
                 this.ctx.beginPath();
                 this.ctx.arc(
                     obstacle.x + obstacle.width/2, 
@@ -366,7 +366,25 @@ class TerrainManager {
                 );
                 this.ctx.fill();
                 
-                // Crater rim highlights
+                // Add impact marks (small lines radiating from crater)
+                this.ctx.strokeStyle = '#444444';
+                this.ctx.lineWidth = 1;
+                for (let i = 0; i < 5; i++) {
+                    const angle = (Math.PI / 3) * i;
+                    const length = obstacle.width * 0.3;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(
+                        obstacle.x + obstacle.width/2, 
+                        obstacle.y + obstacle.height/2
+                    );
+                    this.ctx.lineTo(
+                        obstacle.x + obstacle.width/2 + Math.cos(angle) * length,
+                        obstacle.y + obstacle.height/2 + Math.sin(angle) * length
+                    );
+                    this.ctx.stroke();
+                }
+                
+                // Add shadow/highlight
                 this.ctx.strokeStyle = '#444444';
                 this.ctx.lineWidth = 2;
                 this.ctx.beginPath();
@@ -437,111 +455,111 @@ class TerrainManager {
         }
     }
     
-    drawMines() {
-        // Draw player mines (dropped by player)
-        this.mines.forEach(mine => {
-            // Inactive mines are dimmer
-            if (!mine.active) {
-                this.ctx.globalAlpha = 0.5;
-            }
+	drawMines() {
+	        // Draw player mines (dropped by player)
+	        this.mines.forEach(mine => {
+	            // Inactive mines are dimmer
+	            if (!mine.active) {
+	                this.ctx.globalAlpha = 0.5;
+	            }
             
-            // Draw mine as a rectangular device with blinking light
-            const mineWidth = mine.width;
-            const mineHeight = mine.height * 0.7;
+	            // Draw mine as a rectangular device with blinking light
+	            const mineWidth = mine.width;
+	            const mineHeight = mine.height * 0.7;
             
-            // Main mine body
-            this.ctx.fillStyle = '#3355FF'; // Blue to distinguish from enemy mines
-            this.ctx.fillRect(
-                mine.x, 
-                mine.y + mine.height - mineHeight,
-                mineWidth,
-                mineHeight
-            );
+	            // Main mine body
+	            this.ctx.fillStyle = '#3355FF'; // Blue to distinguish from enemy mines
+	            this.ctx.fillRect(
+	                mine.x, 
+	                mine.y + mine.height - mineHeight,
+	                mineWidth,
+	                mineHeight
+	            );
             
-            // Add panel lines
-            this.ctx.strokeStyle = '#1133AA';
-            this.ctx.lineWidth = 1;
-            this.ctx.beginPath();
-            this.ctx.moveTo(mine.x + mineWidth*0.33, mine.y + mine.height - mineHeight);
-            this.ctx.lineTo(mine.x + mineWidth*0.33, mine.y + mine.height);
-            this.ctx.moveTo(mine.x + mineWidth*0.66, mine.y + mine.height - mineHeight);
-            this.ctx.lineTo(mine.x + mineWidth*0.66, mine.y + mine.height);
-            this.ctx.stroke();
+	            // Add panel lines
+	            this.ctx.strokeStyle = '#1133AA';
+	            this.ctx.lineWidth = 1;
+	            this.ctx.beginPath();
+	            this.ctx.moveTo(mine.x + mineWidth*0.33, mine.y + mine.height - mineHeight);
+	            this.ctx.lineTo(mine.x + mineWidth*0.33, mine.y + mine.height);
+	            this.ctx.moveTo(mine.x + mineWidth*0.66, mine.y + mine.height - mineHeight);
+	            this.ctx.lineTo(mine.x + mineWidth*0.66, mine.y + mine.height);
+	            this.ctx.stroke();
             
-            // Activation status indicator
-            if (mine.active) {
-                // Active: blinking light
-                const blinkingOn = (this.game.frameCount % 10 < 5);
-                this.ctx.fillStyle = blinkingOn ? '#00FFFF' : '#0088AA';
-                this.ctx.beginPath();
-                this.ctx.arc(
-                    mine.x + mineWidth/2,
-                    mine.y + mine.height - mineHeight - 5,
-                    4,
-                    0, Math.PI*2
-                );
-                this.ctx.fill();
+	            // Activation status indicator
+	            if (mine.active) {
+	                // Active: blinking light
+	                const blinkingOn = (this.game.frameCount % 10 < 5);
+	                this.ctx.fillStyle = blinkingOn ? '#00FFFF' : '#0088AA';
+	                this.ctx.beginPath();
+	                this.ctx.arc(
+	                    mine.x + mineWidth/2,
+	                    mine.y + mine.height - mineHeight - 5,
+	                    4,
+	                    0, Math.PI*2
+	                );
+	                this.ctx.fill();
                 
-                // Light glow when blinking
-                if (blinkingOn) {
-                    this.ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
-                    this.ctx.beginPath();
-                    this.ctx.arc(
-                        mine.x + mineWidth/2,
-                        mine.y + mine.height - mineHeight - 5,
-                        8,
-                        0, Math.PI*2
-                    );
-                    this.ctx.fill();
-                }
-            } else {
-                // Inactive: timer display
-                this.ctx.fillStyle = '#223366';
-                this.ctx.beginPath();
-                this.ctx.arc(
-                    mine.x + mineWidth/2,
-                    mine.y + mine.height - mineHeight - 5,
-                    4,
-                    0, Math.PI*2
-                );
-                this.ctx.fill();
-            }
+	                // Light glow when blinking
+	                if (blinkingOn) {
+	                    this.ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+	                    this.ctx.beginPath();
+	                    this.ctx.arc(
+	                        mine.x + mineWidth/2,
+	                        mine.y + mine.height - mineHeight - 5,
+	                        8,
+	                        0, Math.PI*2
+	                    );
+	                    this.ctx.fill();
+	                }
+	            } else {
+	                // Inactive: timer display
+	                this.ctx.fillStyle = '#223366';
+	                this.ctx.beginPath();
+	                this.ctx.arc(
+	                    mine.x + mineWidth/2,
+	                    mine.y + mine.height - mineHeight - 5,
+	                    4,
+	                    0, Math.PI*2
+	                );
+	                this.ctx.fill();
+	            }
             
-            // Reset alpha
-            this.ctx.globalAlpha = 1.0;
-        });
-    }
+	            // Reset alpha
+	            this.ctx.globalAlpha = 1.0;
+	        });
+	    }
     
-    drawSectionMarkers(scrollOffset) {
-        // Draw section boundaries
-        this.ctx.strokeStyle = '#FFFFFF';
-        this.ctx.lineWidth = 2;
-        this.ctx.setLineDash([5, 5]);
+	    drawSectionMarkers(scrollOffset) {
+	        // Draw section boundaries
+	        this.ctx.strokeStyle = '#FFFFFF';
+	        this.ctx.lineWidth = 2;
+	        this.ctx.setLineDash([5, 5]);
         
-        for (let i = 0; i <= this.levelLength; i++) {
-            const boundaryX = i * this.sectionWidth - scrollOffset;
-            if (boundaryX >= 0 && boundaryX <= GAME_WIDTH) {
-                // Draw section boundary line
-                this.ctx.beginPath();
-                this.ctx.moveTo(boundaryX, GAME_HEIGHT - GROUND_HEIGHT);
-                this.ctx.lineTo(boundaryX, GAME_HEIGHT);
-                this.ctx.stroke();
+	        for (let i = 0; i <= this.levelLength; i++) {
+	            const boundaryX = i * this.sectionWidth - scrollOffset;
+	            if (boundaryX >= 0 && boundaryX <= GAME_WIDTH) {
+	                // Draw section boundary line
+	                this.ctx.beginPath();
+	                this.ctx.moveTo(boundaryX, GAME_HEIGHT - GROUND_HEIGHT);
+	                this.ctx.lineTo(boundaryX, GAME_HEIGHT);
+	                this.ctx.stroke();
                 
-                // Draw section letter if it's a starting boundary
-                if (i < this.levelLength) {
-                    this.ctx.fillStyle = '#AAAAAA';
-                    this.ctx.font = '24px Arial';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.fillText(
-                        String.fromCharCode(65 + i), 
-                        boundaryX + 50, 
-                        GAME_HEIGHT - 15
-                    );
-                }
-            }
-        }
+	                // Draw section letter if it's a starting boundary
+	                if (i < this.levelLength) {
+	                    this.ctx.fillStyle = '#AAAAAA';
+	                    this.ctx.font = '24px Arial';
+	                    this.ctx.textAlign = 'center';
+	                    this.ctx.fillText(
+	                        String.fromCharCode(65 + i), 
+	                        boundaryX + 50, 
+	                        GAME_HEIGHT - 15
+	                    );
+	                }
+	            }
+	        }
         
-        // Reset line dash
-        this.ctx.setLineDash([]);
-    }
-}
+	        // Reset line dash
+	        this.ctx.setLineDash([]);
+	    }
+	}
