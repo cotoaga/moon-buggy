@@ -220,8 +220,8 @@ class TerrainManager {
             if (adjustedX + segment.width < 0 || adjustedX > GAME_WIDTH) continue;
             
             if (segment.type === 'crater') {
-                // Draw crater
-                this.ctx.fillStyle = '#333333';
+                // Draw crater with better visibility
+                this.ctx.fillStyle = '#222222';
                 this.ctx.beginPath();
                 this.ctx.arc(
                     adjustedX + segment.width/2, 
@@ -230,9 +230,21 @@ class TerrainManager {
                     0, Math.PI
                 );
                 this.ctx.fill();
+                
+                // Add highlight
+                this.ctx.strokeStyle = '#333333';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    adjustedX + segment.width/2, 
+                    GAME_HEIGHT - GROUND_HEIGHT, 
+                    segment.width/2, 
+                    Math.PI * 0.2, Math.PI * 0.8
+                );
+                this.ctx.stroke();
             } else if (segment.type === 'bump') {
-                // Draw bump
-                this.ctx.fillStyle = '#666666';
+                // Draw bump with better visibility
+                this.ctx.fillStyle = '#777777'; // Lighter color for visibility
                 this.ctx.beginPath();
                 this.ctx.arc(
                     adjustedX + segment.width/2, 
@@ -261,15 +273,15 @@ class TerrainManager {
             if (obstacle.destroyed) continue;
             
             if (obstacle.type === OBSTACLE_TYPES.ROCK) {
-                // Draw rock
+                // Draw rock as a clear pyramid/triangle
                 this.ctx.fillStyle = '#888888';
                 this.ctx.beginPath();
                 this.ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
-                this.ctx.lineTo(obstacle.x + obstacle.width/2, obstacle.y);
+                this.ctx.lineTo(obstacle.x + obstacle.width/2, obstacle.y - 5); // Make it taller
                 this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
                 this.ctx.fill();
                 
-                // Add rock details
+                // Add rock details with better contrast
                 this.ctx.strokeStyle = '#666666';
                 this.ctx.lineWidth = 2;
                 this.ctx.beginPath();
@@ -277,19 +289,20 @@ class TerrainManager {
                 this.ctx.lineTo(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height - 15);
                 this.ctx.stroke();
             } else if (obstacle.type === OBSTACLE_TYPES.CRATER) {
-                // Draw crater
-                this.ctx.fillStyle = '#222222';
+                // Draw crater with better visibility
+                this.ctx.fillStyle = '#111111'; // Darker color for visibility
                 this.ctx.beginPath();
                 this.ctx.arc(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2, 
                          obstacle.width/2, 0, Math.PI);
                 this.ctx.fill();
                 
-                // Add crater details
-                this.ctx.fillStyle = '#111111';
+                // Add crater edge highlighting
+                this.ctx.strokeStyle = '#555555';
+                this.ctx.lineWidth = 2;
                 this.ctx.beginPath();
-                this.ctx.arc(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2 + 5,
-                         obstacle.width/3, 0, Math.PI);
-                this.ctx.fill();
+                this.ctx.arc(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2, 
+                         obstacle.width/2, Math.PI * 0.8, Math.PI * 0.2, true);
+                this.ctx.stroke();
             } else if (obstacle.type === OBSTACLE_TYPES.MINE) {
                 // Draw mine with pulsing effect
                 const pulseSize = Math.sin(this.game.frameCount / 10) * 2;

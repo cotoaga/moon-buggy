@@ -6,24 +6,28 @@ class ParallaxManager {
         this.stars = [];
         this.frontMountains = [];
         this.backMountains = [];
+        this.twinkleTimer = 0;
     }
     
     initialize() {
         // Generate stars
         this.generateStars();
         
-        // Generate mountains
+        // Generate mountains with increased height for back mountains
         this.frontMountains = this.generateMountainRange(36, 100, 150, 0.8);
-        this.backMountains = this.generateMountainRange(24, 60, 100, 0.6);
+        this.backMountains = this.generateMountainRange(24, 80, 140, 0.6); // Increased min/max height
     }
     
     generateStars() {
         this.stars = [];
-        for (let i = 0; i < 100; i++) {
+        // Generate different sizes/brightnesses of stars for more visual interest
+        for (let i = 0; i < 120; i++) {
             this.stars.push({
                 x: Math.random() * GAME_WIDTH,
                 y: Math.random() * (GAME_HEIGHT - GROUND_HEIGHT - 50),
-                size: Math.random() * 2 + 1
+                size: Math.random() * 2 + 1,
+                brightness: Math.random(), // Used for twinkling effect
+                twinkleSpeed: Math.random() * 0.05 + 0.01 // Different speeds for twinkling
             });
         }
     }
@@ -43,31 +47,72 @@ class ParallaxManager {
             
             // Create smoother transitions between points
             const variation = (Math.random() - 0.5) * (maxHeight - minHeight) * roughness;
-            const y = Math.max(
+            let y = Math.max(
                 GAME_HEIGHT - GROUND_HEIGHT - maxHeight,
                 Math.min(GAME_HEIGHT - GROUND_HEIGHT - minHeight, lastY + variation)
             );
             
+            // Add occasional sharper peaks for more interesting silhouettes
+            if (Math.random() < 0.1) {
+                const peakHeight = Math.random() * 15 + 10;
+                y = Math.max(GAME_HEIGHT - GROUND_HEIGHT - maxHeight - peakHeight, y - peakHeight);
+            }
+            
             points.push({ x, y });
             lastY = y;
+        }
+        
+        // Ensure smooth wrapping by making start and end points match
+        const smoothFactor = 5; // Number of points to smooth at each end
+        for (let i = 0; i < smoothFactor; i++) {
+            const weight = i / smoothFactor;
+            const startPoint = points[i];
+            const endPoint = points[points.length - smoothFactor + i];
+            
+            // Blend the heights
+            const avgY = startPoint.y * (1 - weight) + endPoint.y * weight;
+            startPoint.y = avgY;
+            endPoint.y = avgY;
         }
         
         return points;
     }
     
     update(deltaTime, levelProgress) {
-        // Stars twinkle effect
-        if (this.game.frameCount % 30 === 0) {
-            // Make some stars twinkle by changing their size
-            for (let i = 0; i < 10; i++) {
-                const randomStar = Math.floor(Math.random() * this.stars.length);
-                this.stars[randomStar].size = Math.random() * 2 + 1;
-            }
+        // Update twinkle timer
+        this.twinkleTimer += deltaTime;
+        
+        // Stars twinkle effect - more natural than random changes
+        for (let i = 0; i < this.stars.length; i++) {
+            const star = this.stars[i];
+            // Each star twinkles at its own rate
+            star.brightness = 0.5 + 0.5 * Math.sin(this.twinkleTimer * star.twinkleSpeed);
+        }
+        
+        // Occasionally generate a shooting star
+        if (Math.random() < 0.001) {
+            this.createShootingStar();
         }
     }
     
+    createShootingStar() {
+        // Create a shooting star that will be visible for a brief moment
+        this.stars.push({
+            x: Math.random() * GAME_WIDTH,
+            y: Math.random() * (GAME_HEIGHT / 2), // Only in the upper half of the sky
+            size: 3, // Larger than regular stars
+            brightness: 1,
+            isShooting: true,
+            angle: Math.PI / 4 + (Math.random() * Math.PI / 2), // Diagonal trajectory
+            speed: 5 + Math.random() * 10,
+            trail: [],
+            lifetime: 0,
+            maxLifetime: 30 + Math.random() * 20 // Frames to live
+        });
+    }
+    
     draw(levelProgress) {
-        // Draw stars
+        // Draw starfield with twinkling
         this.drawStars();
         
         // Draw mountains with parallax
@@ -75,14 +120,54 @@ class ParallaxManager {
     }
     
     drawStars() {
-        this.ctx.fillStyle = '#FFFFFF';
-        this.stars.forEach(star => {
-            this.ctx.fillRect(star.x, star.y, star.size, star.size);
-        });
+        // Regular stars
+        for (let i = 0; i < this.stars.length; i++) {
+            const star = this.stars[i];
+            
+            // Handle shooting stars separately
+            if (star.isShooting) {
+                // Draw shooting star trail
+                this.ctx.strokeStyle = `rgba(255, 255, 255, ${1 - star.lifetime / star.maxLifetime})`;
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(star.x, star.y);
+                
+                // Move the shooting star
+                star.x += Math.cos(star.angle) * star.speed;
+                star.y += Math.sin(star.angle) * star.speed;
+                
+                this.ctx.lineTo(star.x, star.y);
+                this.ctx.stroke();
+                
+                // Draw the star head
+                this.ctx.fillStyle = `rgba(255, 255, 255, ${1 - star.lifetime / star.maxLifetime})`;
+                this.ctx.beginPath();
+                this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Increment lifetime and remove if too old
+                star.lifetime++;
+                if (star.lifetime > star.maxLifetime || 
+                    star.x < 0 || star.x > GAME_WIDTH || 
+                    star.y < 0 || star.y > GAME_HEIGHT) {
+                    this.stars.splice(i, 1);
+                    i--;
+                }
+            } else {
+                // Normal twinkling stars
+                const alpha = 0.5 + star.brightness * 0.5;
+                this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                this.ctx.fillRect(star.x, star.y, star.size, star.size);
+            }
+        }
     }
     
     drawMountains(levelProgress) {
         const scrollOffset = (levelProgress / 100) * (800 * 12); // sectionWidth * levelLength
+        
+        // Add subtle vertical movement to mountains based on level progress
+        const backMountainWave = Math.sin(levelProgress * 0.05) * 10;
+        const frontMountainWave = Math.sin(levelProgress * 0.08) * 15;
         
         // Draw back mountains (far parallax)
         this.ctx.fillStyle = '#444444';
@@ -95,20 +180,30 @@ class ParallaxManager {
             const adjustedX = this.backMountains[i].x - (scrollOffset * PARALLAX_FAR);
             // Only draw visible points
             if (adjustedX >= -100 && adjustedX <= GAME_WIDTH + 100) {
-                this.ctx.lineTo(adjustedX, this.backMountains[i].y);
+                // Add subtle wave to mountain height
+                const adjustedY = this.backMountains[i].y + backMountainWave;
+                this.ctx.lineTo(adjustedX, adjustedY);
                 drawnPoints++;
             }
         }
         
         // Ensure we have points to draw
         if (drawnPoints === 0) {
-            this.ctx.lineTo(0, GAME_HEIGHT - GROUND_HEIGHT - 50);
-            this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT - 50);
+            this.ctx.lineTo(0, GAME_HEIGHT - GROUND_HEIGHT - 50 + backMountainWave);
+            this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT - 50 + backMountainWave);
         }
         
         this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT);
         this.ctx.closePath();
         this.ctx.fill();
+        
+        // Add subtle shading to the mountains
+        const backGradient = this.ctx.createLinearGradient(
+            0, GAME_HEIGHT - GROUND_HEIGHT - 100, 
+            0, GAME_HEIGHT - GROUND_HEIGHT
+        );
+        backGradient.addColorStop(0, '#444444'); // Lighter at the top
+        backGradient.addColorStop(1, '#333333'); // Darker at the bottom
         
         // Draw front mountains (near parallax)
         this.ctx.fillStyle = '#666666';
@@ -121,19 +216,31 @@ class ParallaxManager {
             const adjustedX = this.frontMountains[i].x - (scrollOffset * PARALLAX_NEAR);
             // Only draw visible points
             if (adjustedX >= -100 && adjustedX <= GAME_WIDTH + 100) {
-                this.ctx.lineTo(adjustedX, this.frontMountains[i].y);
+                // Add subtle wave to mountain height
+                const adjustedY = this.frontMountains[i].y + frontMountainWave;
+                this.ctx.lineTo(adjustedX, adjustedY);
                 drawnPoints++;
             }
         }
         
         // Ensure we have points to draw
         if (drawnPoints === 0) {
-            this.ctx.lineTo(0, GAME_HEIGHT - GROUND_HEIGHT - 100);
-            this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT - 100);
+            this.ctx.lineTo(0, GAME_HEIGHT - GROUND_HEIGHT - 100 + frontMountainWave);
+            this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT - 100 + frontMountainWave);
         }
         
         this.ctx.lineTo(GAME_WIDTH, GAME_HEIGHT - GROUND_HEIGHT);
         this.ctx.closePath();
+        
+        // Add gradient to front mountains for depth
+        const frontGradient = this.ctx.createLinearGradient(
+            0, GAME_HEIGHT - GROUND_HEIGHT - 150, 
+            0, GAME_HEIGHT - GROUND_HEIGHT
+        );
+        frontGradient.addColorStop(0, '#777777'); // Lighter at the top
+        frontGradient.addColorStop(1, '#555555'); // Darker at the bottom
+        
+        this.ctx.fillStyle = frontGradient;
         this.ctx.fill();
     }
 }

@@ -56,21 +56,27 @@ class Player {
             const jumpDuration = Date.now() - this.jumpStartTime;
             const jumpPhase = Math.min(jumpDuration / 1000, 1); // Normalize to 0-1 over 1 second
             
-            // Different physics for ascent vs descent
-            if (jumpPhase < 0.4) {
-                // Initial ascent - strong but gradually decreasing upward force
-                this.velocityY = -JUMP_FORCE * (1 - jumpPhase/0.4) * 0.8;
-            } else if (jumpPhase < 0.6) {
-                // Peak of jump - very low gravity "hanging" effect
+            // Enhance the lunar gravity effect with three distinct phases:
+            
+            // Initial thrust phase (0-0.3)
+            if (jumpPhase < 0.3) {
+                // Strong initial thrust that gradually decreases
+                this.velocityY = -JUMP_FORCE * (1 - jumpPhase/0.3) * 0.9;
+            } 
+            // "Hang time" phase (0.3-0.7) - very low gravity feel
+            else if (jumpPhase < 0.7) {
                 if (!this.jumpPeakReached) {
                     this.jumpPeakReached = true;
-                    this.velocityY = -0.5; // Slight upward drift at peak
+                    this.velocityY = -0.3; // Slight upward drift at peak
                 }
-                this.velocityY += GRAVITY * 0.3 * deltaTime / 16; // Very low gravity at peak
-            } else {
-                // Descent phase - gradually increasing gravity
-                const descentPhase = (jumpPhase - 0.6) / 0.4; // 0 to 1 during descent
-                this.velocityY += GRAVITY * (0.7 + descentPhase * 0.6) * deltaTime / 16;
+                // Very minimal gravity during hang time (only 20% of normal)
+                this.velocityY += GRAVITY * 0.2 * deltaTime / 16; 
+            } 
+            // Descent phase (0.7-1.0) - gradually increasing gravity
+            else {
+                const descentPhase = (jumpPhase - 0.7) / 0.3; // 0 to 1 during descent
+                // Gravity increases as you fall, creating more realistic acceleration
+                this.velocityY += GRAVITY * (0.5 + descentPhase * 0.9) * deltaTime / 16;
             }
             
             // Update position
@@ -84,10 +90,30 @@ class Player {
                 this.isJumping = false;
                 this.jumpPeakReached = false;
             }
+            
+            // Add absolute ground check
+            if (this.y >= GAME_HEIGHT - GROUND_HEIGHT - PLAYER_HEIGHT) {
+                this.y = GAME_HEIGHT - GROUND_HEIGHT - PLAYER_HEIGHT;
+                this.velocityY = 0;
+                this.isJumping = false;
+                this.jumpPeakReached = false;
+            }
         } else {
-            // When not jumping, ensure player follows the ground height
+            // When not jumping, check if we're over a crater
             const groundY = this.game.terrain.getGroundY(this.x + PLAYER_WIDTH/2);
-            this.y = groundY - PLAYER_HEIGHT;
+            const previousY = this.y;
+            
+            // If we suddenly detect a much lower ground (crater), start falling instead of teleporting
+            if (groundY > previousY + 20) {
+                // Start falling into the crater
+                this.isJumping = true;
+                this.velocityY = 0; // Start with zero velocity
+                this.jumpStartTime = Date.now() - 700; // Start in the descent phase
+                this.jumpPeakReached = true;
+            } else {
+                // Normal ground following
+                this.y = groundY - PLAYER_HEIGHT;
+            }
         }
         
         // Cooldown for shooting
@@ -227,10 +253,15 @@ class Player {
         // Draw vehicle body (Cybertruck-inspired angular design)
         this.ctx.fillStyle = '#C0C0C0'; // Metallic silver
         
-        // Calculate wheel wobble based on frame count
-        const wheelOffset1 = Math.sin(this.game.frameCount / 4) * 2;
-        const wheelOffset2 = Math.sin(this.game.frameCount / 4 + 1) * 2;
-        const wheelOffset3 = Math.sin(this.game.frameCount / 4 + 2) * 2;
+        // Calculate wheel wobble based on frame count and movement
+        let wheelSpeed = 4; // Default speed
+        if (this.game.input.keys.left || this.game.input.keys.right) {
+            wheelSpeed = 2; // Faster rotation when moving
+        }
+        
+        const wheelOffset1 = Math.sin(this.game.frameCount / wheelSpeed) * 2;
+        const wheelOffset2 = Math.sin(this.game.frameCount / wheelSpeed + 1) * 2;
+        const wheelOffset3 = Math.sin(this.game.frameCount / wheelSpeed + 2) * 2;
         
         // Main body (trapezoid)
         this.ctx.beginPath();
