@@ -16,12 +16,33 @@
             <div id="time">Time: 0:00</div>
         </div>
         <div id="controlsInfo">
-            Controls: ← → (move), Space (jump)
+            Controls: A/S (move), Space (jump), P (shoot), O (shoot up), K (mine)
+        </div>
+        <div class="mobile-controls">
+            <button class="button" id="leftBtn">←</button>
+            <button class="button" id="jumpBtn">Jump</button>
+            <button class="button" id="upBtn">↑</button>
+            <button class="button" id="shootBtn">Shoot</button>
+            <button class="button" id="mineBtn">Mine</button>
+            <button class="button" id="rightBtn">→</button>
         </div>
     </div>
-
-    <!-- Include game files -->
-    <script src="game-constants.js"></script>
-    <script src="game-engine.js"></script>
+    
+    <!-- Load constants first -->
+    <script src="js/constants.js"></script>
+    
+    <!-- Load core modules -->
+    <script src="js/effects.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/collision.js"></script>
+    <script src="js/parallax.js"></script>
+    <script src="js/terrain.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/enemies.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/levels.js"></script>
+    
+    <!-- Load game engine last -->
+    <script src="js/engine.js"></script>
 </body>
 </html>
