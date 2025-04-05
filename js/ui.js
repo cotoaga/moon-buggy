@@ -5,20 +5,23 @@ class UIManager {
         this.ctx = game.ctx;
     }
     
-    draw() {
-        // Update UI elements
-        document.getElementById('lives').textContent = `Lives: ${this.game.player.lives}`;
-        document.getElementById('score').textContent = `Score: ${this.game.score}`;
-        document.getElementById('level').textContent = `Level: ${this.game.level}`;
+	draw() {
+	        // Update UI elements
+	        document.getElementById('lives').textContent = `Lives: ${this.game.player.lives}`;
+	        document.getElementById('score').textContent = `Score: ${this.game.score}`;
+	        document.getElementById('level').textContent = `Level: ${this.game.level}`;
         
-        const minutes = Math.floor(this.game.gameTime / 60000);
-        const seconds = Math.floor((this.game.gameTime % 60000) / 1000);
-        document.getElementById('time').textContent = 
-            `Time: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+	        const minutes = Math.floor(this.game.gameTime / 60000);
+	        const seconds = Math.floor((this.game.gameTime % 60000) / 1000);
+	        document.getElementById('time').textContent = 
+	            `Time: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
         
-        // Draw current section indicator
-        this.drawSectionIndicator();
-    }
+	        // Draw God Mode indicator
+	        document.getElementById('godMode').textContent = `God Mode: ${this.game.godMode ? 'ON' : 'OFF'}`;
+        
+	        // Draw current section indicator
+	        this.drawSectionIndicator();
+	}
     
     drawSectionIndicator() {
         // Display current section more prominently

@@ -40,3 +40,6 @@ const BASE_SPAWN_TIME = {
     ufoLow: 15000,
     buggy: 20000
 };
+
+// God-Mode-Switch
+let godMode = true; // Now a variable that can be toggled

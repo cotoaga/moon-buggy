@@ -224,9 +224,9 @@ class Player {
         }
     }
     
-    hit() {
+	hit() {
         if (!this.invulnerable) {
-            if (godMode) {
+            if (this.game.godMode) {
                 // In god mode, just flash but don't lose lives
                 this.invulnerable = 1000;
                 

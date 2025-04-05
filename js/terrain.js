@@ -38,9 +38,10 @@ class TerrainManager {
             if (rand < obstacleChance) {
                 segmentType = 'crater';
                 segmentHeight = -55;
-            } else if (rand < obstacleChance * 2) {
-                segmentType = 'bump';
-                segmentHeight = 30;
+            } else {
+                // No more bumps - just flat or crater
+                segmentType = 'flat';
+                segmentHeight = 0;
             }
             
             this.groundSegments.push({
@@ -53,12 +54,17 @@ class TerrainManager {
             
             // Add obstacles on flat segments occasionally
             if (segmentType === 'flat' && Math.random() < 0.08) {
+                // Rock obstacles are larger now
+                const isRock = Math.random() < 0.6;
+                const obstacleWidth = isRock ? 40 : 30;
+                const obstacleHeight = isRock ? 35 : 25;
+                
                 this.obstacles.push({
                     x: i * segmentWidth + segmentWidth/2,
-                    y: GAME_HEIGHT - GROUND_HEIGHT - 25,
-                    width: 30,
-                    height: 25,
-                    type: Math.random() < 0.6 ? OBSTACLE_TYPES.ROCK : OBSTACLE_TYPES.CRATER,
+                    y: GAME_HEIGHT - GROUND_HEIGHT - obstacleHeight,
+                    width: obstacleWidth,
+                    height: obstacleHeight,
+                    type: isRock ? OBSTACLE_TYPES.ROCK : OBSTACLE_TYPES.CRATER,
                     destroyed: false
                 });
             }
@@ -220,8 +226,10 @@ class TerrainManager {
             if (adjustedX + segment.width < 0 || adjustedX > GAME_WIDTH) continue;
             
             if (segment.type === 'crater') {
-                // Draw crater with better visibility
-                this.ctx.fillStyle = '#222222';
+                // Draw crater with moon-like appearance
+                this.ctx.fillStyle = '#1A1A1A'; // Darker for depth
+                
+                // Main crater
                 this.ctx.beginPath();
                 this.ctx.arc(
                     adjustedX + segment.width/2, 
@@ -231,28 +239,36 @@ class TerrainManager {
                 );
                 this.ctx.fill();
                 
-                // Add highlight
-                this.ctx.strokeStyle = '#333333';
-                this.ctx.lineWidth = 2;
+                // Add deeper inner crater
+                this.ctx.fillStyle = '#0F0F0F';
                 this.ctx.beginPath();
                 this.ctx.arc(
                     adjustedX + segment.width/2, 
-                    GAME_HEIGHT - GROUND_HEIGHT, 
-                    segment.width/2, 
-                    Math.PI * 0.2, Math.PI * 0.8
-                );
-                this.ctx.stroke();
-            } else if (segment.type === 'bump') {
-                // Draw bump with better visibility
-                this.ctx.fillStyle = '#777777'; // Lighter color for visibility
-                this.ctx.beginPath();
-                this.ctx.arc(
-                    adjustedX + segment.width/2, 
-                    GAME_HEIGHT - GROUND_HEIGHT, 
-                    segment.width/2, 
-                    Math.PI, Math.PI * 2
+                    GAME_HEIGHT - GROUND_HEIGHT,
+                    segment.width/3, 
+                    0, Math.PI
                 );
                 this.ctx.fill();
+                
+                // Add impact marks (small lines radiating from crater)
+                this.ctx.strokeStyle = '#333333';
+                this.ctx.lineWidth = 1;
+                for (let i = 0; i < 5; i++) {
+                    const angle = (Math.PI / 6) + i * (Math.PI / 12);
+                    const length = segment.width * 0.3;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(
+                        adjustedX + segment.width/2, 
+                        GAME_HEIGHT - GROUND_HEIGHT
+                    );
+                    this.ctx.lineTo(
+                        adjustedX + segment.width/2 + Math.cos(angle) * length,
+                        GAME_HEIGHT - GROUND_HEIGHT + Math.sin(angle) * length
+                    );
+                    this.ctx.stroke();
+                }
+            } else if (segment.type === 'bump') {
+                // Remove "bump" rendering - we don't need these
             }
         }
         
@@ -273,65 +289,142 @@ class TerrainManager {
             if (obstacle.destroyed) continue;
             
             if (obstacle.type === OBSTACLE_TYPES.ROCK) {
-                // Draw rock as a clear pyramid/triangle
-                this.ctx.fillStyle = '#888888';
+                // Draw larger, more realistic moon rock
+                obstacle.width = Math.max(obstacle.width, 40); // Ensure rocks are larger
+                obstacle.height = Math.max(obstacle.height, 35); // Ensure rocks are taller
+                
+                // Base rock shape (irregular)
+                this.ctx.fillStyle = '#777777';
                 this.ctx.beginPath();
-                this.ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
-                this.ctx.lineTo(obstacle.x + obstacle.width/2, obstacle.y - 5); // Make it taller
-                this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+                
+                // Create an irregular rock shape
+                const rockPoints = [
+                    {x: obstacle.x, y: obstacle.y + obstacle.height},
+                    {x: obstacle.x + obstacle.width*0.2, y: obstacle.y + obstacle.height*0.5},
+                    {x: obstacle.x + obstacle.width*0.4, y: obstacle.y + obstacle.height*0.3},
+                    {x: obstacle.x + obstacle.width*0.6, y: obstacle.y + obstacle.height*0.1},
+                    {x: obstacle.x + obstacle.width*0.8, y: obstacle.y + obstacle.height*0.4},
+                    {x: obstacle.x + obstacle.width, y: obstacle.y + obstacle.height}
+                ];
+                
+                this.ctx.moveTo(rockPoints[0].x, rockPoints[0].y);
+                for (let i = 1; i < rockPoints.length; i++) {
+                    this.ctx.lineTo(rockPoints[i].x, rockPoints[i].y);
+                }
+                this.ctx.closePath();
                 this.ctx.fill();
                 
-                // Add rock details with better contrast
-                this.ctx.strokeStyle = '#666666';
-                this.ctx.lineWidth = 2;
+                // Rock details/highlights
+                this.ctx.strokeStyle = '#999999';
+                this.ctx.lineWidth = 1;
+                
+                // Add some cracks
                 this.ctx.beginPath();
-                this.ctx.moveTo(obstacle.x + obstacle.width/3, obstacle.y + obstacle.height - 10);
-                this.ctx.lineTo(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height - 15);
+                this.ctx.moveTo(obstacle.x + obstacle.width*0.3, obstacle.y + obstacle.height*0.6);
+                this.ctx.lineTo(obstacle.x + obstacle.width*0.5, obstacle.y + obstacle.height*0.3);
                 this.ctx.stroke();
-            } else if (obstacle.type === OBSTACLE_TYPES.CRATER) {
-                // Draw crater with better visibility
-                this.ctx.fillStyle = '#111111'; // Darker color for visibility
+                
                 this.ctx.beginPath();
-                this.ctx.arc(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2, 
-                         obstacle.width/2, 0, Math.PI);
+                this.ctx.moveTo(obstacle.x + obstacle.width*0.6, obstacle.y + obstacle.height*0.5);
+                this.ctx.lineTo(obstacle.x + obstacle.width*0.8, obstacle.y + obstacle.height*0.7);
+                this.ctx.stroke();
+                
+                // Add shadow below rock
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(
+                    obstacle.x + obstacle.width/2, 
+                    obstacle.y + obstacle.height - 2,
+                    obstacle.width/2,
+                    7,
+                    0, 0, Math.PI*2
+                );
+                this.ctx.fill();
+            } else if (obstacle.type === OBSTACLE_TYPES.CRATER) {
+                // Draw small crater obstacles
+                obstacle.width = Math.max(obstacle.width, 30); // Ensure craters are visible
+                
+                // Main crater
+                this.ctx.fillStyle = '#111111';
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    obstacle.x + obstacle.width/2, 
+                    obstacle.y + obstacle.height/2, 
+                    obstacle.width/2,
+                    0, Math.PI*2
+                );
                 this.ctx.fill();
                 
-                // Add crater edge highlighting
-                this.ctx.strokeStyle = '#555555';
+                // Inner crater
+                this.ctx.fillStyle = '#0A0A0A';
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    obstacle.x + obstacle.width/2, 
+                    obstacle.y + obstacle.height/2 + 3, 
+                    obstacle.width/3,
+                    0, Math.PI*2
+                );
+                this.ctx.fill();
+                
+                // Crater rim highlights
+                this.ctx.strokeStyle = '#444444';
                 this.ctx.lineWidth = 2;
                 this.ctx.beginPath();
-                this.ctx.arc(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2, 
-                         obstacle.width/2, Math.PI * 0.8, Math.PI * 0.2, true);
+                this.ctx.arc(
+                    obstacle.x + obstacle.width/2, 
+                    obstacle.y + obstacle.height/2, 
+                    obstacle.width/2 - 2,
+                    Math.PI*1.7, Math.PI*0.3
+                );
                 this.ctx.stroke();
             } else if (obstacle.type === OBSTACLE_TYPES.MINE) {
-                // Draw mine with pulsing effect
-                const pulseSize = Math.sin(this.game.frameCount / 10) * 2;
+                // Draw mine as a rectangular device with blinking light
+                const mineWidth = obstacle.width;
+                const mineHeight = obstacle.height * 0.7; // Make it shorter than wide
                 
-                this.ctx.fillStyle = '#FF0000';
-                this.ctx.beginPath();
-                this.ctx.arc(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2, 
-                         obstacle.width/2 + pulseSize, 0, Math.PI * 2);
-                this.ctx.fill();
+                // Main mine body
+                this.ctx.fillStyle = '#AA3333';
+                this.ctx.fillRect(
+                    obstacle.x, 
+                    obstacle.y + obstacle.height - mineHeight,
+                    mineWidth,
+                    mineHeight
+                );
                 
-                // Add spikes
-                this.ctx.strokeStyle = '#FFFF00';
+                // Add panel lines
+                this.ctx.strokeStyle = '#661111';
+                this.ctx.lineWidth = 1;
                 this.ctx.beginPath();
-                for (let i = 0; i < 8; i++) {
-                    const angle = i * Math.PI / 4;
-                    this.ctx.moveTo(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2);
-                    this.ctx.lineTo(
-                        obstacle.x + obstacle.width/2 + Math.cos(angle) * (obstacle.width/1.5 + pulseSize),
-                        obstacle.y + obstacle.height/2 + Math.sin(angle) * (obstacle.height/1.5 + pulseSize)
-                    );
-                }
+                this.ctx.moveTo(obstacle.x + mineWidth*0.33, obstacle.y + obstacle.height - mineHeight);
+                this.ctx.lineTo(obstacle.x + mineWidth*0.33, obstacle.y + obstacle.height);
+                this.ctx.moveTo(obstacle.x + mineWidth*0.66, obstacle.y + obstacle.height - mineHeight);
+                this.ctx.lineTo(obstacle.x + mineWidth*0.66, obstacle.y + obstacle.height);
                 this.ctx.stroke();
                 
-                // Add blinking light
-                this.ctx.fillStyle = this.game.frameCount % 20 < 10 ? '#FFFFFF' : '#FFFF00';
+                // Blinking light on top
+                const blinkingOn = this.game.frameCount % 20 < 10;
+                this.ctx.fillStyle = blinkingOn ? '#FFFF00' : '#AA5500';
                 this.ctx.beginPath();
-                this.ctx.arc(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2, 
-                         obstacle.width/5, 0, Math.PI * 2);
+                this.ctx.arc(
+                    obstacle.x + mineWidth/2,
+                    obstacle.y + obstacle.height - mineHeight - 5,
+                    4,
+                    0, Math.PI*2
+                );
                 this.ctx.fill();
+                
+                // Light glow when blinking
+                if (blinkingOn) {
+                    this.ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(
+                        obstacle.x + mineWidth/2,
+                        obstacle.y + obstacle.height - mineHeight - 5,
+                        8,
+                        0, Math.PI*2
+                    );
+                    this.ctx.fill();
+                }
             } else if (obstacle.type === 'bullet') {
                 // Draw enemy bullet
                 this.ctx.fillStyle = '#FF8800';
@@ -345,34 +438,72 @@ class TerrainManager {
     }
     
     drawMines() {
-        // Draw player mines
+        // Draw player mines (dropped by player)
         this.mines.forEach(mine => {
             // Inactive mines are dimmer
             if (!mine.active) {
                 this.ctx.globalAlpha = 0.5;
             }
             
-            // Draw mine circle
-            this.ctx.fillStyle = '#FF0000';
-            this.ctx.beginPath();
-            this.ctx.arc(mine.x + mine.width/2, mine.y + mine.height/2, mine.width/2, 0, Math.PI * 2);
-            this.ctx.fill();
+            // Draw mine as a rectangular device with blinking light
+            const mineWidth = mine.width;
+            const mineHeight = mine.height * 0.7;
             
-            // Add crosshairs
-            this.ctx.strokeStyle = '#FFFF00';
-            this.ctx.lineWidth = 2;
+            // Main mine body
+            this.ctx.fillStyle = '#3355FF'; // Blue to distinguish from enemy mines
+            this.ctx.fillRect(
+                mine.x, 
+                mine.y + mine.height - mineHeight,
+                mineWidth,
+                mineHeight
+            );
+            
+            // Add panel lines
+            this.ctx.strokeStyle = '#1133AA';
+            this.ctx.lineWidth = 1;
             this.ctx.beginPath();
-            this.ctx.moveTo(mine.x, mine.y + mine.height/2);
-            this.ctx.lineTo(mine.x + mine.width, mine.y + mine.height/2);
-            this.ctx.moveTo(mine.x + mine.width/2, mine.y);
-            this.ctx.lineTo(mine.x + mine.width/2, mine.y + mine.height);
+            this.ctx.moveTo(mine.x + mineWidth*0.33, mine.y + mine.height - mineHeight);
+            this.ctx.lineTo(mine.x + mineWidth*0.33, mine.y + mine.height);
+            this.ctx.moveTo(mine.x + mineWidth*0.66, mine.y + mine.height - mineHeight);
+            this.ctx.lineTo(mine.x + mineWidth*0.66, mine.y + mine.height);
             this.ctx.stroke();
             
-            // Add blinking light
+            // Activation status indicator
             if (mine.active) {
-                this.ctx.fillStyle = (this.game.frameCount % 10 < 5) ? '#FFFFFF' : '#FFFF00';
+                // Active: blinking light
+                const blinkingOn = (this.game.frameCount % 10 < 5);
+                this.ctx.fillStyle = blinkingOn ? '#00FFFF' : '#0088AA';
                 this.ctx.beginPath();
-                this.ctx.arc(mine.x + mine.width/2, mine.y + mine.height/2, mine.width/4, 0, Math.PI * 2);
+                this.ctx.arc(
+                    mine.x + mineWidth/2,
+                    mine.y + mine.height - mineHeight - 5,
+                    4,
+                    0, Math.PI*2
+                );
+                this.ctx.fill();
+                
+                // Light glow when blinking
+                if (blinkingOn) {
+                    this.ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(
+                        mine.x + mineWidth/2,
+                        mine.y + mine.height - mineHeight - 5,
+                        8,
+                        0, Math.PI*2
+                    );
+                    this.ctx.fill();
+                }
+            } else {
+                // Inactive: timer display
+                this.ctx.fillStyle = '#223366';
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    mine.x + mineWidth/2,
+                    mine.y + mine.height - mineHeight - 5,
+                    4,
+                    0, Math.PI*2
+                );
                 this.ctx.fill();
             }
             

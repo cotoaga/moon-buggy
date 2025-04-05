@@ -20,6 +20,15 @@ class InputManager {
         window.addEventListener('keydown', this.handleKeyDown.bind(this));
         window.addEventListener('keyup', this.handleKeyUp.bind(this));
         
+    	// Set up God Mode toggle
+        const godModeElement = document.getElementById('godMode');
+        if (godModeElement) {
+            godModeElement.addEventListener('click', () => {
+                this.game.godMode = !this.game.godMode;
+                godMode = this.game.godMode; // Update the global variable
+            });
+        }
+		
         // Set up mobile controls if they exist
         const leftBtn = document.getElementById('leftBtn');
         const rightBtn = document.getElementById('rightBtn');

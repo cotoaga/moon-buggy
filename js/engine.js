@@ -12,6 +12,7 @@ class Game {
         this.frameCount = 0;
         this.score = 0;
         this.level = 1;
+        this.godMode = godMode; // Initialize from global variable
         
         // Game modules
         this.input = null;
@@ -123,6 +124,12 @@ class Game {
             this.level++;
             this.terrain.levelProgress = 0; // Reset progress
             
+            // Level 42 Easter Egg
+            if (this.level === 42) {
+                this.showLevel42EasterEgg();
+                return; // Don't continue normal level progression
+            }
+            
             // Apply new level settings
             this.levels.setLevel(this.level);
             
@@ -132,6 +139,46 @@ class Game {
             // Show level completion message
             this.ui.showLevelMessage();
         }
+    }
+    
+    showLevel42EasterEgg() {
+        // Pause the game
+        this.gameRunning = false;
+        
+        // Create easter egg dialog
+        const easterEggDiv = document.createElement('div');
+        easterEggDiv.style.position = 'absolute';
+        easterEggDiv.style.top = '50%';
+        easterEggDiv.style.left = '50%';
+        easterEggDiv.style.transform = 'translate(-50%, -50%)';
+        easterEggDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        easterEggDiv.style.color = '#33FF33';
+        easterEggDiv.style.padding = '30px';
+        easterEggDiv.style.borderRadius = '10px';
+        easterEggDiv.style.maxWidth = '600px';
+        easterEggDiv.style.textAlign = 'center';
+        easterEggDiv.style.fontFamily = 'monospace';
+        easterEggDiv.style.fontSize = '18px';
+        easterEggDiv.style.zIndex = '100';
+        easterEggDiv.style.boxShadow = '0 0 20px #33FF33';
+        
+        // Add message
+        easterEggDiv.innerHTML = `
+            <h2 style="color: #33FF33;">LEVEL 42</h2>
+            <p>Maximal unprovability level reached</p>
+            <p>Yes, the result is still: 42</p>
+            <p>Press RERUN to start over reasoning on the universe, life, and everything else calculation.</p>
+            <button id="rerunButton" style="margin-top: 20px; padding: 10px 20px; background-color: #33FF33; color: black; border: none; cursor: pointer; font-weight: bold; font-size: 16px;">RERUN</button>
+        `;
+        
+        // Add to document
+        document.getElementById('gameContainer').appendChild(easterEggDiv);
+        
+        // Add event listener to restart button
+        document.getElementById('rerunButton').addEventListener('click', () => {
+            easterEggDiv.remove();
+            this.restartGame();
+        });
     }
     
     // Handle score updates
@@ -179,6 +226,43 @@ class Game {
         this.ctx.fillText('Press R to restart', GAME_WIDTH/2, GAME_HEIGHT/2 + 40);
         this.ctx.font = '16px Arial';
         this.ctx.fillText(`Final Score: ${this.score}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 70);
+    }
+    
+    restartGame() {
+        // Reset game state
+        this.gameRunning = true;
+        this.level = 1;
+        this.score = 0;
+        this.gameTime = 0;
+        
+        // Reset player
+        this.player.x = 200;
+        this.player.y = GAME_HEIGHT - GROUND_HEIGHT - PLAYER_HEIGHT;
+        this.player.velocityY = 0;
+        this.player.isJumping = false;
+        this.player.lives = 3;
+        this.player.invulnerable = 0;
+        this.player.bullets = [];
+        
+        // Reset terrain
+        this.terrain.levelProgress = 0;
+        this.terrain.currentSection = 'A';
+        this.terrain.obstacles = [];
+        this.terrain.mines = [];
+        
+        // Reset enemies
+        this.enemies.enemies = [];
+        
+        // Reset spawn counters
+        this.enemies.spawnCounters = {
+            ufoHigh: 3000,
+            ufoMid: 5000,
+            ufoLow: 7000,
+            buggy: 10000
+        };
+        
+        // Apply level 1 settings
+        this.levels.setLevel(1);
     }
     
     showErrorMessage(error) {
