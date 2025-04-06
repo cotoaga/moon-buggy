@@ -20,6 +20,12 @@ class Player {
         this.mines = [];
         this.maxBullets = 10;
         this.maxMines = 5;
+		this.energy = 100;
+		this.maxEnergy = 100;
+		this.shield = 10;
+		this.maxShield = 100;
+		this.energyRecoveryRate = 0.2; // per frame
+		this.shieldRecoveryRate = 0.05; // per frame
     }
     
     initialize() {
@@ -98,24 +104,29 @@ class Player {
                 this.isJumping = false;
                 this.jumpPeakReached = false;
             }
-        } else {
-            // When not jumping, check if we're over a crater
-            const groundY = this.game.terrain.getGroundY(this.x + PLAYER_WIDTH/2);
-            const previousY = this.y;
-            
-            // If we suddenly detect a much lower ground (crater), start falling instead of teleporting
-            if (groundY > previousY + 20) {
-                // Start falling into the crater
-                this.isJumping = true;
-                this.velocityY = 0; // Start with zero velocity
-                this.jumpStartTime = Date.now() - 700; // Start in the descent phase
-                this.jumpPeakReached = true;
-            } else {
-                // Normal ground following
-                this.y = groundY - PLAYER_HEIGHT;
-            }
-        }
+		} else {
+		    // When not jumping, check if we're over a crater
+		    const groundY = this.game.terrain.getGroundY(this.x + PLAYER_WIDTH/2);
+		    const previousY = this.y;
+    
+		    // If we suddenly detect a much lower ground (crater), start falling instead of teleporting
+		    if (groundY > previousY + 20) {
+		        // Start falling into the crater
+		        this.isJumping = true;
+		        this.velocityY = 0; // Start with zero velocity
+		        this.jumpStartTime = Date.now() - 700; // Start in the descent phase
+		        this.jumpPeakReached = true;
         
+		        // Add this line to check for death at the bottom of craters
+		        if (groundY > GAME_HEIGHT - GROUND_HEIGHT - 45) {
+		            this.hit(); // Player gets hit when in deep crater
+		        }
+		    } else {
+		        // Normal ground following
+		        this.y = groundY - PLAYER_HEIGHT;
+		    }
+		}
+		        
         // Cooldown for shooting
         if (this.cooldown > 0) {
             this.cooldown -= deltaTime;
@@ -128,6 +139,18 @@ class Player {
         
         // Update player bullets
         this.updateBullets(deltaTime);
+		
+		// Energy recovery
+		if (this.energy < this.maxEnergy) {
+		    this.energy += this.energyRecoveryRate * deltaTime / 16;
+		    this.energy = Math.min(this.energy, this.maxEnergy);
+		}
+
+		// Shield recovery only when energy is full
+		if (this.energy === this.maxEnergy && this.shield < this.maxShield) {
+		    this.shield += this.shieldRecoveryRate * deltaTime / 16;
+		    this.shield = Math.min(this.shield, this.maxShield);
+		}
     }
     
     updateBullets(deltaTime) {
@@ -159,94 +182,152 @@ class Player {
         }
     }
     
-    shoot() {
-        if (this.cooldown <= 0 && this.bullets.length < this.maxBullets) {
-            // Create bullet
-            this.bullets.push({
-                x: this.x + PLAYER_WIDTH,
-                y: this.y + PLAYER_HEIGHT/3,
-                width: BULLET_SIZE,
-                height: BULLET_SIZE,
-                velocityX: BULLET_SPEED,
-                velocityY: 0,
-                type: 'forward'
-            });
+	shoot() {
+	    const energyCost = 5;
+	    if (this.cooldown <= 0 && this.bullets.length < this.maxBullets && this.energy >= energyCost) {
+	        // Reduce energy
+	        this.energy -= energyCost;
+        
+	        // Create bullet
+	        this.bullets.push({
+	            x: this.x + PLAYER_WIDTH,
+	            y: this.y + PLAYER_HEIGHT/3,
+	            width: BULLET_SIZE,
+	            height: BULLET_SIZE,
+	            velocityX: BULLET_SPEED,
+	            velocityY: 0,
+	            type: 'forward'
+	        });
+        
+	        // Reset cooldown
+	        this.cooldown = SHOOT_COOLDOWN;
+        
+	        // Add visual feedback for shooting
+	        this.isShooting = true;
+	        setTimeout(() => {
+	            this.isShooting = false;
+	        }, 100);
+	    }
+	}
+	    
+	shootUp() {
+	    const energyCost = 5;
+	    if (this.cooldown <= 0 && this.bullets.length < this.maxBullets && this.energy >= energyCost) {
+	        // Reduce energy
+	        this.energy -= energyCost;
+        
+	        // Create bullet
+	        this.bullets.push({
+	            x: this.x + PLAYER_WIDTH/2,
+	            y: this.y - BULLET_SIZE,
+	            width: BULLET_SIZE,
+	            height: BULLET_SIZE,
+	            velocityX: 0,
+	            velocityY: -BULLET_SPEED,
+	            type: 'upward'
+	        });
+        
+	        // Reset cooldown
+	        this.cooldown = SHOOT_COOLDOWN;
+        
+	        // Add visual feedback for shooting
+	        this.isShootingUp = true;
+	        setTimeout(() => {
+	            this.isShootingUp = false;
+	        }, 100);
+	    }
+	}
+
+	dropMine() {
+	    const energyCost = 10;
+	    if (this.mineCooldown <= 0 && this.game.terrain.mines.length < this.maxMines && this.energy >= energyCost) {
+	        // Reduce energy
+	        this.energy -= energyCost;
+        
+	        // Create mine
+	        this.game.terrain.mines.push({
+	            x: this.x,
+	            y: this.game.terrain.getGroundY(this.x) - 20,
+	            width: 20,
+	            height: 20,
+	            timer: 1000, // Activation timer
+	            active: false
+	        });
+        
+	        // Reset cooldown
+	        this.mineCooldown = MINE_COOLDOWN;
+	    }
+	}
+	        
+	hit(hitType) {
+	    if (!this.invulnerable) {
+	        // Different hit handling based on hit type
+	        if (hitType === 'crater') {
+	            // Instant death from craters regardless of shield/godmode
+	            this.lives--;
+	            this.invulnerable = 2000;
+	            this.showDeathMessage("You drove full speed ahead into a crater. That was unnecessarily dumb and even your sophisticated shields could not save you from your own stupidity.");
             
-            // Reset cooldown
-            this.cooldown = SHOOT_COOLDOWN;
+	            if (this.lives <= 0) {
+	                this.game.gameRunning = false;
+	            }
+	        }
+	        else if (hitType === 'rock' && this.shield > 0) {
+	            // Rocks drain shield
+	            this.shield -= 25;
+	            this.invulnerable = 500;
+	            this.game.effects.createShieldEffect(this.x, this.y, PLAYER_WIDTH, PLAYER_HEIGHT);
+	        }
+	        else if (this.game.godMode) {
+	            // God mode prevents damage from everything except craters
+	            this.invulnerable = 1000;
+	            this.game.effects.createShieldEffect(this.x, this.y, PLAYER_WIDTH, PLAYER_HEIGHT);
+	        }
+	        else {
+	            // No shield, lose a life
+	            this.lives--;
+	            this.invulnerable = 2000;
+	            this.game.effects.createShieldEffect(this.x, this.y, PLAYER_WIDTH, PLAYER_HEIGHT);
             
-            // Add visual feedback for shooting
-            this.isShooting = true;
-            setTimeout(() => {
-                this.isShooting = false;
-            }, 100);
-        }
-    }
+	            if (this.lives <= 0) {
+	                this.game.gameRunning = false;
+	            }
+	        }
+	    }
+	}
+
+	showDeathMessage(message) {
+	    // Create a death message dialog
+	    const deathMsg = document.createElement('div');
+	    deathMsg.style.position = 'absolute';
+	    deathMsg.style.top = '50%';
+	    deathMsg.style.left = '50%';
+	    deathMsg.style.transform = 'translate(-50%, -50%)';
+	    deathMsg.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+	    deathMsg.style.color = '#FF3333';
+	    deathMsg.style.padding = '20px';
+	    deathMsg.style.borderRadius = '10px';
+	    deathMsg.style.fontFamily = '"Press Start 2P", monospace';
+	    deathMsg.style.fontSize = '16px';
+	    deathMsg.style.maxWidth = '500px';
+	    deathMsg.style.textAlign = 'center';
+	    deathMsg.style.zIndex = '100';
+	    deathMsg.innerHTML = `
+	        <p>${message}</p>
+	        <button id="tryAgainBtn" style="background: #333; color: #FFF; border: none; 
+	        padding: 10px 20px; margin-top: 20px; cursor: pointer; font-family: 'Press Start 2P', monospace;">
+	        Try again harder</button>
+	    `;
     
-    shootUp() {
-        if (this.cooldown <= 0 && this.bullets.length < this.maxBullets) {
-            // Create bullet
-            this.bullets.push({
-                x: this.x + PLAYER_WIDTH/2,
-                y: this.y - BULLET_SIZE,
-                width: BULLET_SIZE,
-                height: BULLET_SIZE,
-                velocityX: 0,
-                velocityY: -BULLET_SPEED,
-                type: 'upward'
-            });
-            
-            // Reset cooldown
-            this.cooldown = SHOOT_COOLDOWN;
-            
-            // Add visual feedback for shooting
-            this.isShootingUp = true;
-            setTimeout(() => {
-                this.isShootingUp = false;
-            }, 100);
-        }
-    }
+	    document.getElementById('gameContainer').appendChild(deathMsg);
     
-    dropMine() {
-        if (this.mineCooldown <= 0 && this.game.terrain.mines.length < this.maxMines) {
-            // Create mine
-            this.game.terrain.mines.push({
-                x: this.x,
-                y: this.game.terrain.getGroundY(this.x) - 20,
-                width: 20,
-                height: 20,
-                timer: 1000, // Activation timer
-                active: false
-            });
-            
-            // Reset cooldown
-            this.mineCooldown = MINE_COOLDOWN;
-        }
-    }
-    
-	hit() {
-        if (!this.invulnerable) {
-            if (this.game.godMode) {
-                // In god mode, just flash but don't lose lives
-                this.invulnerable = 1000;
-                
-                // Add shield effect
-                this.game.effects.createShieldEffect(this.x, this.y, PLAYER_WIDTH, PLAYER_HEIGHT);
-            } else {
-                // Normal gameplay: lose a life
-                this.lives--;
-                this.invulnerable = 2000;
-                
-                // Add shield effect
-                this.game.effects.createShieldEffect(this.x, this.y, PLAYER_WIDTH, PLAYER_HEIGHT);
-                
-                if (this.lives <= 0) {
-                    this.game.gameRunning = false;
-                }
-            }
-        }
-    }
-    
+	    // Add event listener to restart button
+	    document.getElementById('tryAgainBtn').addEventListener('click', () => {
+	        deathMsg.remove();
+	        this.game.restartGame();
+	    });
+	}
+		    
     draw() {
         if (this.flash) return; // Skip drawing when flashing
         
@@ -303,7 +384,7 @@ class Player {
         this.ctx.fill();
         
         // Draw six wheels with independent wobble
-        this.ctx.fillStyle = '#333333';
+		this.ctx.fillStyle = '#000000'; // Change from #333333 to pure black
         
         // Front wheels
         this.ctx.beginPath();

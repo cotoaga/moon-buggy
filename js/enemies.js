@@ -209,7 +209,7 @@ class EnemyManager {
         this.ctx.fillRect(buggy.x, buggy.y, buggy.width, buggy.height);
         
         // Draw wheels
-        this.ctx.fillStyle = '#444444';
+		this.ctx.fillStyle = '#000000'; // Change from #444444 to pure black
         this.ctx.beginPath();
         this.ctx.arc(buggy.x + 15, buggy.y + buggy.height, 8, 0, Math.PI * 2);
         this.ctx.arc(buggy.x + buggy.width - 15, buggy.y + buggy.height, 8, 0, Math.PI * 2);

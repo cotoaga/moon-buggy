@@ -13,6 +13,7 @@ class Game {
         this.score = 0;
         this.level = 1;
         this.godMode = godMode; // Initialize from global variable
+		this.freezeMode = false;
         
         // Game modules
         this.input = null;
@@ -70,7 +71,7 @@ class Game {
             // Clear canvas
             this.ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             
-            if (this.gameRunning) {
+            if (this.gameRunning && !this.freezeMode) {
                 // Update game elements
                 this.updateGame(limitedDelta);
                 
@@ -79,10 +80,15 @@ class Game {
                 
                 // Increment frame counter
                 this.frameCount++;
-            } else {
+            } else if (this.freezeMode) {
+				// Only draw in freeze mode, don't update
+			} else {
                 // Game over screen
                 this.drawGameOver();
             }
+
+			// Always draw the game
+			this.drawGame();
             
             // Continue the game loop
             requestAnimationFrame(this.gameLoop.bind(this));
@@ -217,17 +223,17 @@ class Game {
         });
     }
     
-    drawGameOver() {
-        this.ctx.fillStyle = 'white';
-        this.ctx.font = '40px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('GAME OVER', GAME_WIDTH/2, GAME_HEIGHT/2);
-        this.ctx.font = '20px Arial';
-        this.ctx.fillText('Press R to restart', GAME_WIDTH/2, GAME_HEIGHT/2 + 40);
-        this.ctx.font = '16px Arial';
-        this.ctx.fillText(`Final Score: ${this.score}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 70);
-    }
-    
+	drawGameOver() {
+	    this.ctx.fillStyle = 'white';
+	    this.ctx.font = '40px "Press Start 2P"';
+	    this.ctx.textAlign = 'center';
+	    this.ctx.fillText('GAME OVER', GAME_WIDTH/2, GAME_HEIGHT/2);
+	    this.ctx.font = '20px "Press Start 2P"';
+	    this.ctx.fillText('Press R to restart', GAME_WIDTH/2, GAME_HEIGHT/2 + 40);
+	    this.ctx.font = '16px "Press Start 2P"';
+	    this.ctx.fillText(`Final Score: ${this.score}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 70);
+	}
+	    
     restartGame() {
         // Reset game state
         this.gameRunning = true;

@@ -53,21 +53,20 @@ class TerrainManager {
             });
             
             // Add obstacles on flat segments occasionally
-            if (segmentType === 'flat' && Math.random() < 0.08) {
-                // Rock obstacles are larger now
-                const isRock = Math.random() < 0.6;
-                const obstacleWidth = isRock ? 40 : 30;
-                const obstacleHeight = isRock ? 35 : 25;
-                
-                this.obstacles.push({
-                    x: i * segmentWidth + segmentWidth/2,
-                    y: GAME_HEIGHT - GROUND_HEIGHT - obstacleHeight,
-                    width: obstacleWidth,
-                    height: obstacleHeight,
-                    type: isRock ? OBSTACLE_TYPES.ROCK : OBSTACLE_TYPES.CRATER,
-                    destroyed: false
-                });
-            }
+			if (segmentType === 'flat' && Math.random() < 0.08) {
+			    // Only rocks, no small craters
+			    const obstacleWidth = 40;
+			    const obstacleHeight = 35;
+    
+			    this.obstacles.push({
+			        x: i * segmentWidth + segmentWidth/2,
+			        y: GAME_HEIGHT - GROUND_HEIGHT - obstacleHeight,
+			        width: obstacleWidth,
+			        height: obstacleHeight,
+			        type: OBSTACLE_TYPES.ROCK,
+			        destroyed: false
+			    });
+			}
         }
     }
     
@@ -288,59 +287,36 @@ class TerrainManager {
             
             if (obstacle.destroyed) continue;
             
-            if (obstacle.type === OBSTACLE_TYPES.ROCK) {
-                // Draw larger, more realistic moon rock
-                obstacle.width = Math.max(obstacle.width, 40); // Ensure rocks are larger
-                obstacle.height = Math.max(obstacle.height, 35); // Ensure rocks are taller
-                
-                // Base rock shape (irregular)
-                this.ctx.fillStyle = '#777777';
-                this.ctx.beginPath();
-                
-                // Create an irregular rock shape
-                const rockPoints = [
-                    {x: obstacle.x, y: obstacle.y + obstacle.height},
-                    {x: obstacle.x + obstacle.width*0.2, y: obstacle.y + obstacle.height*0.5},
-                    {x: obstacle.x + obstacle.width*0.4, y: obstacle.y + obstacle.height*0.3},
-                    {x: obstacle.x + obstacle.width*0.6, y: obstacle.y + obstacle.height*0.1},
-                    {x: obstacle.x + obstacle.width*0.8, y: obstacle.y + obstacle.height*0.4},
-                    {x: obstacle.x + obstacle.width, y: obstacle.y + obstacle.height}
-                ];
-                
-                this.ctx.moveTo(rockPoints[0].x, rockPoints[0].y);
-                for (let i = 1; i < rockPoints.length; i++) {
-                    this.ctx.lineTo(rockPoints[i].x, rockPoints[i].y);
-                }
-                this.ctx.closePath();
-                this.ctx.fill();
-                
-                // Rock details/highlights
-                this.ctx.strokeStyle = '#999999';
-                this.ctx.lineWidth = 1;
-                
-                // Add some cracks
-                this.ctx.beginPath();
-                this.ctx.moveTo(obstacle.x + obstacle.width*0.3, obstacle.y + obstacle.height*0.6);
-                this.ctx.lineTo(obstacle.x + obstacle.width*0.5, obstacle.y + obstacle.height*0.3);
-                this.ctx.stroke();
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(obstacle.x + obstacle.width*0.6, obstacle.y + obstacle.height*0.5);
-                this.ctx.lineTo(obstacle.x + obstacle.width*0.8, obstacle.y + obstacle.height*0.7);
-                this.ctx.stroke();
-                
-                // Add shadow below rock
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                this.ctx.beginPath();
-                this.ctx.ellipse(
-                    obstacle.x + obstacle.width/2, 
-                    obstacle.y + obstacle.height - 2,
-                    obstacle.width/2,
-                    7,
-                    0, 0, Math.PI*2
-                );
-                this.ctx.fill();
-            } else if (obstacle.type === OBSTACLE_TYPES.CRATER) {
+			if (obstacle.type === OBSTACLE_TYPES.ROCK) {
+			    // Draw more realistic rocks
+			    const rockCenterX = obstacle.x + obstacle.width/2;
+			    const rockBottomY = obstacle.y + obstacle.height;
+    
+			    // Rock base (dark gray)
+			    this.ctx.fillStyle = '#555555';
+			    this.ctx.beginPath();
+			    this.ctx.moveTo(obstacle.x, rockBottomY);
+			    this.ctx.lineTo(obstacle.x + obstacle.width*0.3, rockBottomY - obstacle.height*0.5);
+			    this.ctx.lineTo(obstacle.x + obstacle.width*0.7, rockBottomY - obstacle.height*0.7);
+			    this.ctx.lineTo(obstacle.x + obstacle.width, rockBottomY);
+			    this.ctx.closePath();
+			    this.ctx.fill();
+    
+			    // Rock highlights (lighter gray)
+			    this.ctx.fillStyle = '#999999';
+			    this.ctx.beginPath();
+			    this.ctx.moveTo(obstacle.x + obstacle.width*0.3, rockBottomY - obstacle.height*0.5);
+			    this.ctx.lineTo(obstacle.x + obstacle.width*0.5, rockBottomY - obstacle.height*0.9);
+			    this.ctx.lineTo(obstacle.x + obstacle.width*0.7, rockBottomY - obstacle.height*0.7);
+			    this.ctx.closePath();
+			    this.ctx.fill();
+    
+			    // Shadow
+			    this.ctx.fillStyle = 'rgba(0,0,0,0.4)';
+			    this.ctx.beginPath();
+			    this.ctx.ellipse(rockCenterX, rockBottomY - 2, obstacle.width/2, 4, 0, 0, Math.PI*2);
+			    this.ctx.fill();
+			} else if (obstacle.type === OBSTACLE_TYPES.CRATER) {
                 // Draw small crater obstacles (similar to ground craters but smaller)
                 obstacle.width = Math.max(obstacle.width, 30); // Ensure craters are visible
                 

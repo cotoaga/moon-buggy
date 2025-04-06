@@ -28,6 +28,14 @@ class InputManager {
                 godMode = this.game.godMode; // Update the global variable
             });
         }
+		// Set up Freeze Mode toggle
+		const freezeModeElement = document.getElementById('freezeMode');
+		if (freezeModeElement) {
+		    freezeModeElement.addEventListener('click', () => {
+		        this.game.freezeMode = !this.game.freezeMode;
+		        freezeModeElement.textContent = `Freeze: ${this.game.freezeMode ? 'ON' : 'OFF'}`;
+		    });
+		}
 		
         // Set up mobile controls if they exist
         const leftBtn = document.getElementById('leftBtn');

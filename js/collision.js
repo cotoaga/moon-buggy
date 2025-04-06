@@ -12,49 +12,50 @@ class CollisionManager {
                a.y + a.height > b.y;
     }
     
-    checkCollisions() {
-        this.checkPlayerObstacleCollisions();
-        this.checkPlayerEnemyCollisions();
-        this.checkBulletObstacleCollisions();
-        this.checkBulletEnemyCollisions();
-        this.checkMineEnemyCollisions();
-    }
+	checkCollisions() {
+	    this.checkPlayerObstacleCollisions();
+	    this.checkPlayerEnemyCollisions();
+	    this.checkPlayerBulletCollisions(); // Add this line
+	    this.checkBulletObstacleCollisions();
+	    this.checkBulletEnemyCollisions();
+	    this.checkMineEnemyCollisions();
+	}
+	    
+	checkPlayerObstacleCollisions() {
+	    // Skip if player is invulnerable
+	    if (this.game.player.invulnerable > 0) return;
     
-    checkPlayerObstacleCollisions() {
-        // Skip if player is invulnerable
-        if (this.game.player.invulnerable > 0) return;
+	    // Check collision with each obstacle
+	    for (let i = 0; i < this.game.terrain.obstacles.length; i++) {
+	        const obstacle = this.game.terrain.obstacles[i];
         
-        // Check collision with each obstacle
-        for (let i = 0; i < this.game.terrain.obstacles.length; i++) {
-            const obstacle = this.game.terrain.obstacles[i];
-            
-            // Skip destroyed obstacles
-            if (obstacle.destroyed) continue;
-            
-            // Check collision
-            if (this.isColliding(this.game.player, obstacle)) {
-                // Create explosion for mines or bullets
-                if (obstacle.type === OBSTACLE_TYPES.MINE || obstacle.type === 'bullet') {
-                    this.game.addExplosion(
-                        obstacle.x + obstacle.width/2, 
-                        obstacle.y + obstacle.height/2, 
-                        40,
-                        'standard'
-                    );
-                    
-                    // Mark obstacle as destroyed
-                    obstacle.destroyed = true;
-                }
+	        // Skip destroyed obstacles
+	        if (obstacle.destroyed) continue;
+        
+	        // Check collision
+	        if (this.isColliding(this.game.player, obstacle)) {
+	            // Create explosion for mines or bullets
+	            if (obstacle.type === OBSTACLE_TYPES.MINE || obstacle.type === 'bullet') {
+	                this.game.addExplosion(
+	                    obstacle.x + obstacle.width/2, 
+	                    obstacle.y + obstacle.height/2, 
+	                    40,
+	                    'standard'
+	                );
                 
-                // Trigger player hit
-                this.game.player.hit();
-                
-                // Only hit once per frame
-                break;
-            }
-        }
-    }
-    
+	                // Mark obstacle as destroyed
+	                obstacle.destroyed = true;
+	            }
+            
+	            // Trigger player hit with the type of obstacle
+	            this.game.player.hit(obstacle.type);
+            
+	            // Only hit once per frame
+	            break;
+	        }
+	    }
+	}
+	    
     checkPlayerEnemyCollisions() {
         // Skip if player is invulnerable
         if (this.game.player.invulnerable > 0) return;
@@ -121,6 +122,39 @@ class CollisionManager {
             }
         }
     }
+
+	// This should be added to CollisionManager class in collision.js
+	checkPlayerBulletCollisions() {
+	    // Skip if player is invulnerable
+	    if (this.game.player.invulnerable > 0) return;
+    
+	    // Check collision with each enemy bullet
+	    for (let i = 0; i < this.game.terrain.obstacles.length; i++) {
+	        const obstacle = this.game.terrain.obstacles[i];
+        
+	        // Only check bullet type obstacles
+	        if (obstacle.type === 'bullet' && !obstacle.destroyed) {
+	            if (this.isColliding(this.game.player, obstacle)) {
+	                // Create explosion
+	                this.game.addExplosion(
+	                    obstacle.x + obstacle.width/2, 
+	                    obstacle.y + obstacle.height/2, 
+	                    20,
+	                    'standard'
+	                );
+                
+	                // Mark bullet as destroyed
+	                obstacle.destroyed = true;
+                
+	                // Trigger player hit
+	                this.game.player.hit();
+                
+	                // Only hit once per frame
+	                break;
+	            }
+	        }
+	    }
+	}
     
     checkBulletEnemyCollisions() {
         // Check each bullet

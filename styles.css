@@ -1,3 +1,6 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 body {
     margin: 0;
     padding: 0;
@@ -6,10 +9,16 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    font-family: 'Courier New', monospace;
+    font-family: 'Press Start 2P', monospace;
     color: white;
     overflow: hidden;
 }
+
+#ui, #controlsInfo {
+    font-family: 'Press Start 2P', monospace;
+    /* Your existing styles */
+}
+
 
 #gameContainer {
     position: relative;
