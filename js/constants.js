@@ -10,7 +10,7 @@ const PLAYER_SPEED = 5;
 let SCROLL_SPEED = 3;
 const PARALLAX_NEAR = 0.6;
 const PARALLAX_FAR = 0.3;
-const GOD_MODE = true;
+const GOD_MODE = false;
 
 // Obstacle types
 const OBSTACLE_TYPES = {
@@ -42,4 +42,4 @@ const BASE_SPAWN_TIME = {
 };
 
 // God-Mode-Switch
-let godMode = true; // Now a variable that can be toggled
+let godMode = false; // Now a variable that can be toggled

@@ -34,22 +34,38 @@ class CollisionManager {
         
 	        // Check collision
 	        if (this.isColliding(this.game.player, obstacle)) {
-	            // Create explosion for mines or bullets
-	            if (obstacle.type === OBSTACLE_TYPES.MINE || obstacle.type === 'bullet') {
+	            // In god mode, auto-destroy obstacles without taking damage, except for craters
+	            if (this.game.godMode && obstacle.type !== 'crater') {
+	                // Create explosion effect
 	                this.game.addExplosion(
 	                    obstacle.x + obstacle.width/2, 
 	                    obstacle.y + obstacle.height/2, 
-	                    40,
-	                    'standard'
+	                    30,
+	                    obstacle.type === OBSTACLE_TYPES.ROCK ? 'ground' : 'standard'
 	                );
-                
+	                
 	                // Mark obstacle as destroyed
 	                obstacle.destroyed = true;
+	            } else {
+	                // Normal collision handling for non-god mode
+	                
+	                // Create explosion for mines or bullets
+	                if (obstacle.type === OBSTACLE_TYPES.MINE || obstacle.type === 'bullet') {
+	                    this.game.addExplosion(
+	                        obstacle.x + obstacle.width/2, 
+	                        obstacle.y + obstacle.height/2, 
+	                        40,
+	                        'standard'
+	                    );
+	                    
+	                    // Mark obstacle as destroyed
+	                    obstacle.destroyed = true;
+	                }
+	                
+	                // Trigger player hit with the type of obstacle
+	                this.game.player.hit(obstacle.type);
 	            }
-            
-	            // Trigger player hit with the type of obstacle
-	            this.game.player.hit(obstacle.type);
-            
+	            
 	            // Only hit once per frame
 	            break;
 	        }
@@ -77,8 +93,11 @@ class CollisionManager {
                 // Destroy enemy
                 this.game.enemies.enemies.splice(i, 1);
                 
-                // Trigger player hit
-                this.game.player.hit();
+                // In god mode, don't take damage
+                if (!this.game.godMode) {
+                    // Trigger player hit
+                    this.game.player.hit();
+                }
                 
                 // Only hit once per frame
                 break;
@@ -146,8 +165,11 @@ class CollisionManager {
 	                // Mark bullet as destroyed
 	                obstacle.destroyed = true;
                 
-	                // Trigger player hit
-	                this.game.player.hit();
+	                // Don't take damage in god mode
+	                if (!this.game.godMode) {
+	                    // Trigger player hit
+	                    this.game.player.hit();
+	                }
                 
 	                // Only hit once per frame
 	                break;

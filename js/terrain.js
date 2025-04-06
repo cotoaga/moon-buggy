@@ -32,16 +32,24 @@ class TerrainManager {
             
             // More obstacles in later sections
             const sectionIndex = Math.floor((i * segmentWidth) / this.sectionWidth);
-            const obstacleChance = 0.03 + (sectionIndex * 0.005); // Increases difficulty
             
-            const rand = Math.random();
-            if (rand < obstacleChance) {
-                segmentType = 'crater';
-                segmentHeight = -55;
-            } else {
-                // No more bumps - just flat or crater
+            // No craters in the first section to give player a safer start
+            if (sectionIndex === 0) {
                 segmentType = 'flat';
                 segmentHeight = 0;
+            } else {
+                // Add craters in later sections
+                const obstacleChance = 0.03 + (sectionIndex * 0.005); // Increases difficulty
+                
+                const rand = Math.random();
+                if (rand < obstacleChance) {
+                    segmentType = 'crater';
+                    segmentHeight = -55;
+                } else {
+                    // No more bumps - just flat or crater
+                    segmentType = 'flat';
+                    segmentHeight = 0;
+                }
             }
             
             this.groundSegments.push({
@@ -53,20 +61,21 @@ class TerrainManager {
             });
             
             // Add obstacles on flat segments occasionally
-			if (segmentType === 'flat' && Math.random() < 0.08) {
-			    // Only rocks, no small craters
-			    const obstacleWidth = 40;
-			    const obstacleHeight = 35;
+            // No obstacles in the first two screen widths to give player a safe start
+            if (segmentType === 'flat' && Math.random() < 0.08 && i * segmentWidth > GAME_WIDTH * 1.5) {
+                // Only rocks, no small craters
+                const obstacleWidth = 40;
+                const obstacleHeight = 35;
     
-			    this.obstacles.push({
-			        x: i * segmentWidth + segmentWidth/2,
-			        y: GAME_HEIGHT - GROUND_HEIGHT - obstacleHeight,
-			        width: obstacleWidth,
-			        height: obstacleHeight,
-			        type: OBSTACLE_TYPES.ROCK,
-			        destroyed: false
-			    });
-			}
+                this.obstacles.push({
+                    x: i * segmentWidth + segmentWidth/2,
+                    y: GAME_HEIGHT - GROUND_HEIGHT - obstacleHeight,
+                    width: obstacleWidth,
+                    height: obstacleHeight,
+                    type: OBSTACLE_TYPES.ROCK,
+                    destroyed: false
+                });
+            }
         }
     }
     

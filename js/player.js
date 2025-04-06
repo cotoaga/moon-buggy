@@ -26,10 +26,16 @@ class Player {
 		this.maxShield = 100;
 		this.energyRecoveryRate = 0.2; // per frame
 		this.shieldRecoveryRate = 0.05; // per frame
+		this.deathMessageShown = false; // Track if a death message is currently showing
     }
     
     initialize() {
-        // Nothing specific needed for initialization
+        // Clear death message flag on initialization
+        this.deathMessageShown = false;
+        
+        // Ensure no death message is showing
+        const existingMsgs = document.querySelectorAll('.death-message');
+        existingMsgs.forEach(msg => msg.remove());
     }
     
     update(deltaTime, keys) {
@@ -117,9 +123,13 @@ class Player {
 		        this.jumpStartTime = Date.now() - 700; // Start in the descent phase
 		        this.jumpPeakReached = true;
         
-		        // Add this line to check for death at the bottom of craters
+		        // Auto-jump in godMode to avoid craters, otherwise check for death
 		        if (groundY > GAME_HEIGHT - GROUND_HEIGHT - 45) {
-		            this.hit(); // Player gets hit when in deep crater
+		            if (this.game.godMode) {
+		                this.jump(); // Auto-jump in god mode
+		            } else {
+		                this.hit('crater'); // Player gets hit when in deep crater
+		            }
 		        }
 		    } else {
 		        // Normal ground following
@@ -272,7 +282,7 @@ class Player {
 	                this.game.gameRunning = false;
 	            }
 	        }
-	        else if (hitType === 'rock' && this.shield > 0) {
+	        else if (hitType === OBSTACLE_TYPES.ROCK && this.shield > 0) {
 	            // Rocks drain shield
 	            this.shield -= 25;
 	            this.invulnerable = 500;
@@ -297,8 +307,19 @@ class Player {
 	}
 
 	showDeathMessage(message) {
+	    // Prevent showing multiple death messages or when game is not running
+	    if (this.deathMessageShown || !this.game.gameRunning) return;
+	    
+	    // Set flag to indicate death message is showing
+	    this.deathMessageShown = true;
+	    
+	    // Remove any existing death messages first
+	    const existingMsgs = document.querySelectorAll('.death-message');
+	    existingMsgs.forEach(msg => msg.remove());
+	    
 	    // Create a death message dialog
 	    const deathMsg = document.createElement('div');
+	    deathMsg.className = 'death-message'; // Add a class for easy removal
 	    deathMsg.style.position = 'absolute';
 	    deathMsg.style.top = '50%';
 	    deathMsg.style.left = '50%';
@@ -324,6 +345,7 @@ class Player {
 	    // Add event listener to restart button
 	    document.getElementById('tryAgainBtn').addEventListener('click', () => {
 	        deathMsg.remove();
+	        this.deathMessageShown = false; // Reset flag
 	        this.game.restartGame();
 	    });
 	}

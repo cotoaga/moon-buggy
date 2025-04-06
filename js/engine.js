@@ -41,6 +41,10 @@ class Game {
         this.ui = new UIManager(this);
         this.collision = new CollisionManager(this);
         
+        // Clear any existing death messages that might be on screen
+        const existingMsgs = document.querySelectorAll('.death-message');
+        existingMsgs.forEach(msg => msg.remove());
+        
         // Initialize all modules that need initialization
         this.input.initialize();
         this.player.initialize();
@@ -235,6 +239,15 @@ class Game {
 	}
 	    
     restartGame() {
+        // Clear any existing death messages
+        const existingMsgs = document.querySelectorAll('.death-message');
+        existingMsgs.forEach(msg => msg.remove());
+        
+        // Reset death message flag
+        if (this.player) {
+            this.player.deathMessageShown = false;
+        }
+        
         // Reset game state
         this.gameRunning = true;
         this.level = 1;
@@ -249,6 +262,8 @@ class Game {
         this.player.lives = 3;
         this.player.invulnerable = 0;
         this.player.bullets = [];
+        this.player.shield = 10;
+        this.player.energy = 100;
         
         // Reset terrain
         this.terrain.levelProgress = 0;
