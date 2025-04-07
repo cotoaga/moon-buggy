@@ -1,4 +1,4 @@
-// collision.js - Handles collision detection and response
+// collision.js - Collision detection and response
 class CollisionManager {
     constructor(game) {
         this.game = game;
@@ -12,73 +12,77 @@ class CollisionManager {
                a.y + a.height > b.y;
     }
     
-	checkCollisions() {
-	    this.checkPlayerObstacleCollisions();
-	    this.checkPlayerEnemyCollisions();
-	    this.checkPlayerBulletCollisions(); // Add this line
-	    this.checkBulletObstacleCollisions();
-	    this.checkBulletEnemyCollisions();
-	    this.checkMineEnemyCollisions();
-	}
-	    
-	checkPlayerObstacleCollisions() {
-	    // Skip if player is invulnerable
-	    if (this.game.player.invulnerable > 0) return;
+    checkCollisions() {
+        this.checkPlayerObstacleCollisions();
+        this.checkPlayerEnemyCollisions();
+        this.checkPlayerBulletCollisions();
+        this.checkBulletObstacleCollisions();
+        this.checkBulletEnemyCollisions();
+        this.checkMineEnemyCollisions();
+    }
     
-	    // Check collision with each obstacle
-	    for (let i = 0; i < this.game.terrain.obstacles.length; i++) {
-	        const obstacle = this.game.terrain.obstacles[i];
-        
-	        // Skip destroyed obstacles
-	        if (obstacle.destroyed) continue;
-        
-	        // Check collision
-	        if (this.isColliding(this.game.player, obstacle)) {
-	            // In god mode, auto-destroy obstacles without taking damage, except for craters
-	            if (this.game.godMode && obstacle.type !== 'crater') {
-	                // Create explosion effect
-	                this.game.addExplosion(
-	                    obstacle.x + obstacle.width/2, 
-	                    obstacle.y + obstacle.height/2, 
-	                    30,
-	                    obstacle.type === OBSTACLE_TYPES.ROCK ? 'ground' : 'standard'
-	                );
-	                
-	                // Mark obstacle as destroyed
-	                obstacle.destroyed = true;
-	            } else {
-	                // Normal collision handling for non-god mode
-	                
-	                // Create explosion for mines or bullets
-	                if (obstacle.type === OBSTACLE_TYPES.MINE || obstacle.type === 'bullet') {
-	                    this.game.addExplosion(
-	                        obstacle.x + obstacle.width/2, 
-	                        obstacle.y + obstacle.height/2, 
-	                        40,
-	                        'standard'
-	                    );
-	                    
-	                    // Mark obstacle as destroyed
-	                    obstacle.destroyed = true;
-	                }
-	                
-	                // Trigger player hit with the type of obstacle
-	                this.game.player.hit(obstacle.type);
-	            }
-	            
-	            // Only hit once per frame
-	            break;
-	        }
-	    }
-	}
-	    
+    checkPlayerObstacleCollisions() {
+        // Skip if player is invulnerable or necessary components aren't initialized
+        if (!this.game.player || !this.game.terrain || !this.game.terrain.obstacleManager) return;
+        if (this.game.player.health.invulnerable > 0) return;
+    
+        // Check collision with each obstacle
+        const obstacles = this.game.terrain.obstacleManager.obstacles;
+        for (let i = 0; i < obstacles.length; i++) {
+            const obstacle = obstacles[i];
+            
+            // Skip destroyed obstacles
+            if (obstacle.destroyed) continue;
+            
+            // Check collision
+            if (this.isColliding(this.game.player, obstacle)) {
+                // In god mode, auto-destroy obstacles without taking damage, except for craters
+                if (this.game.godMode && obstacle.type !== OBSTACLE_TYPES.CRATER) {
+                    // Create explosion effect
+                    this.game.addExplosion(
+                        obstacle.x + obstacle.width/2, 
+                        obstacle.y + obstacle.height/2, 
+                        30,
+                        obstacle.type === OBSTACLE_TYPES.ROCK ? 'ground' : 'standard'
+                    );
+                    
+                    // Mark obstacle as destroyed
+                    obstacle.destroyed = true;
+                } else {
+                    // Normal collision handling for non-god mode
+                    
+                    // Create explosion for mines or bullets
+                    if (obstacle.type === OBSTACLE_TYPES.MINE || obstacle.type === 'bullet') {
+                        this.game.addExplosion(
+                            obstacle.x + obstacle.width/2, 
+                            obstacle.y + obstacle.height/2, 
+                            40,
+                            'standard'
+                        );
+                        
+                        // Mark obstacle as destroyed
+                        obstacle.destroyed = true;
+                    }
+                    
+                    // Trigger player hit with the type of obstacle
+                    this.game.player.hit(obstacle.type);
+                }
+                
+                // Only hit once per frame
+                break;
+            }
+        }
+    }
+    
     checkPlayerEnemyCollisions() {
-        // Skip if player is invulnerable
-        if (this.game.player.invulnerable > 0) return;
+        // Skip if player is invulnerable or necessary components aren't initialized
+        if (!this.game.player || !this.game.enemies) return;
+        if (this.game.player.health.invulnerable > 0) return;
         
         // Check collision with each enemy
-        for (let i = 0; i < this.game.enemies.enemies.length; i++) {
-            const enemy = this.game.enemies.enemies[i];
+        const enemies = this.game.enemies.enemies;
+        for (let i = 0; i < enemies.length; i++) {
+            const enemy = enemies[i];
             
             // Check collision
             if (this.isColliding(this.game.player, enemy)) {
@@ -91,7 +95,7 @@ class CollisionManager {
                 );
                 
                 // Destroy enemy
-                this.game.enemies.enemies.splice(i, 1);
+                enemies.splice(i, 1);
                 
                 // In god mode, don't take damage
                 if (!this.game.godMode) {
@@ -105,14 +109,57 @@ class CollisionManager {
         }
     }
     
+    checkPlayerBulletCollisions() {
+        // Skip if player is invulnerable or necessary components aren't initialized
+        if (!this.game.player || !this.game.terrain || !this.game.terrain.obstacleManager) return;
+        if (this.game.player.health.invulnerable > 0) return;
+        
+        // Check collision with each enemy bullet
+        const obstacles = this.game.terrain.obstacleManager.obstacles;
+        for (let i = 0; i < obstacles.length; i++) {
+            const obstacle = obstacles[i];
+            
+            // Only check bullet type obstacles
+            if (obstacle.type === 'bullet' && !obstacle.destroyed) {
+                if (this.isColliding(this.game.player, obstacle)) {
+                    // Create explosion
+                    this.game.addExplosion(
+                        obstacle.x + obstacle.width/2, 
+                        obstacle.y + obstacle.height/2, 
+                        20,
+                        'standard'
+                    );
+                    
+                    // Mark bullet as destroyed
+                    obstacle.destroyed = true;
+                    
+                    // Don't take damage in god mode
+                    if (!this.game.godMode) {
+                        // Trigger player hit
+                        this.game.player.hit();
+                    }
+                    
+                    // Only hit once per frame
+                    break;
+                }
+            }
+        }
+    }
+    
     checkBulletObstacleCollisions() {
+        // Skip if necessary components aren't initialized
+        if (!this.game.player || !this.game.player.weapons || !this.game.terrain || !this.game.terrain.obstacleManager) return;
+        
         // Check each bullet
-        for (let i = this.game.player.bullets.length - 1; i >= 0; i--) {
-            const bullet = this.game.player.bullets[i];
+        const bullets = this.game.player.weapons.bullets;
+        const obstacles = this.game.terrain.obstacleManager.obstacles;
+        
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const bullet = bullets[i];
             
             // Check collision with each obstacle
-            for (let j = 0; j < this.game.terrain.obstacles.length; j++) {
-                const obstacle = this.game.terrain.obstacles[j];
+            for (let j = 0; j < obstacles.length; j++) {
+                const obstacle = obstacles[j];
                 
                 // Only rocks can be destroyed by bullets
                 if (obstacle.type === OBSTACLE_TYPES.ROCK && !obstacle.destroyed) {
@@ -129,7 +176,7 @@ class CollisionManager {
                         );
                         
                         // Remove bullet
-                        this.game.player.bullets.splice(i, 1);
+                        bullets.splice(i, 1);
                         
                         // Add score
                         this.game.addScore(20);
@@ -141,54 +188,24 @@ class CollisionManager {
             }
         }
     }
-
-	// This should be added to CollisionManager class in collision.js
-	checkPlayerBulletCollisions() {
-	    // Skip if player is invulnerable
-	    if (this.game.player.invulnerable > 0) return;
-    
-	    // Check collision with each enemy bullet
-	    for (let i = 0; i < this.game.terrain.obstacles.length; i++) {
-	        const obstacle = this.game.terrain.obstacles[i];
-        
-	        // Only check bullet type obstacles
-	        if (obstacle.type === 'bullet' && !obstacle.destroyed) {
-	            if (this.isColliding(this.game.player, obstacle)) {
-	                // Create explosion
-	                this.game.addExplosion(
-	                    obstacle.x + obstacle.width/2, 
-	                    obstacle.y + obstacle.height/2, 
-	                    20,
-	                    'standard'
-	                );
-                
-	                // Mark bullet as destroyed
-	                obstacle.destroyed = true;
-                
-	                // Don't take damage in god mode
-	                if (!this.game.godMode) {
-	                    // Trigger player hit
-	                    this.game.player.hit();
-	                }
-                
-	                // Only hit once per frame
-	                break;
-	            }
-	        }
-	    }
-	}
     
     checkBulletEnemyCollisions() {
+        // Skip if necessary components aren't initialized
+        if (!this.game.player || !this.game.player.weapons || !this.game.enemies) return;
+        
         // Check each bullet
-        for (let i = this.game.player.bullets.length - 1; i >= 0; i--) {
-            const bullet = this.game.player.bullets[i];
+        const bullets = this.game.player.weapons.bullets;
+        const enemies = this.game.enemies.enemies;
+        
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            const bullet = bullets[i];
             
             // Skip if bullet already removed
             if (!bullet) continue;
             
             // Check collision with each enemy
-            for (let j = this.game.enemies.enemies.length - 1; j >= 0; j--) {
-                const enemy = this.game.enemies.enemies[j];
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                const enemy = enemies[j];
                 
                 if (this.isColliding(bullet, enemy)) {
                     // Reduce enemy health
@@ -203,16 +220,16 @@ class CollisionManager {
                     );
                     
                     // Remove bullet
-                    this.game.player.bullets.splice(i, 1);
+                    bullets.splice(i, 1);
                     
                     // Add score based on enemy type
-                    if (enemy.type === ENEMY_TYPES.UFO_HIGH) {
+                    if (enemy.type === 'ufo_high') {
                         this.game.addScore(50);
-                    } else if (enemy.type === ENEMY_TYPES.UFO_MID) {
+                    } else if (enemy.type === 'ufo_mid') {
                         this.game.addScore(75);
-                    } else if (enemy.type === ENEMY_TYPES.UFO_LOW) {
+                    } else if (enemy.type === 'ufo_low') {
                         this.game.addScore(100);
-                    } else if (enemy.type === ENEMY_TYPES.BUGGY) {
+                    } else if (enemy.type === 'buggy') {
                         this.game.addScore(150);
                     }
                     
@@ -230,7 +247,7 @@ class CollisionManager {
                         this.game.addScore(100);
                         
                         // For buggies, drop a mine when destroyed
-                        if (enemy.type === ENEMY_TYPES.BUGGY) {
+                        if (enemy.type === 'buggy' && this.game.terrain) {
                             this.game.terrain.addObstacle({
                                 x: enemy.x + 20,
                                 y: GAME_HEIGHT - GROUND_HEIGHT - 25,
@@ -242,7 +259,7 @@ class CollisionManager {
                         }
                         
                         // Remove enemy
-                        this.game.enemies.enemies.splice(j, 1);
+                        enemies.splice(j, 1);
                     }
                     
                     // Break to next bullet
@@ -253,19 +270,25 @@ class CollisionManager {
     }
     
     checkMineEnemyCollisions() {
+        // Skip if necessary components aren't initialized
+        if (!this.game.terrain || !this.game.terrain.mineManager || !this.game.enemies) return;
+        
         // Only check active mines
-        for (let i = this.game.terrain.mines.length - 1; i >= 0; i--) {
-            const mine = this.game.terrain.mines[i];
+        const mines = this.game.terrain.mineManager.mines;
+        const enemies = this.game.enemies.enemies;
+        
+        for (let i = mines.length - 1; i >= 0; i--) {
+            const mine = mines[i];
             
             // Skip inactive mines
             if (!mine.active) continue;
             
             // Check collision with enemy buggies
-            for (let j = this.game.enemies.enemies.length - 1; j >= 0; j--) {
-                const enemy = this.game.enemies.enemies[j];
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                const enemy = enemies[j];
                 
                 // Only consider buggies since they're ground-based
-                if (enemy.type !== ENEMY_TYPES.BUGGY) continue;
+                if (enemy.type !== 'buggy') continue;
                 
                 if (this.isColliding(mine, enemy)) {
                     // Create large explosion
@@ -277,10 +300,10 @@ class CollisionManager {
                     );
                     
                     // Remove enemy
-                    this.game.enemies.enemies.splice(j, 1);
+                    enemies.splice(j, 1);
                     
                     // Remove mine
-                    this.game.terrain.mines.splice(i, 1);
+                    mines.splice(i, 1);
                     
                     // Add score
                     this.game.addScore(300);

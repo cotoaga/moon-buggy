@@ -77,21 +77,50 @@ class EnemyManager {
     }
     
     updateBuggy(buggy, deltaTime) {
-        // Enemy buggy follows behind player
-        const targetX = this.game.player.x - 150;  // Stay behind player
+        // Enemy buggy follows behind player with improved aggression
+        const targetX = this.game.player.x - 120;  // Stay closer to player
         const distanceToTarget = targetX - buggy.x;
-        buggy.x += Math.sign(distanceToTarget) * Math.min(Math.abs(distanceToTarget) * 0.05, 2);
+    
+        // Use variable speed - faster when far away to catch up
+        const speedFactor = Math.abs(distanceToTarget) > 300 ? 0.08 : 0.05;
+    
+        // Move toward target position with variable speed
+        buggy.x += Math.sign(distanceToTarget) * Math.min(Math.abs(distanceToTarget) * speedFactor, 3);
+    
+        // Occasional aggressive dash toward player
+        if (!buggy.dashCooldown) {
+            buggy.dashCooldown = 0;
+        }
+    
+        buggy.dashCooldown -= deltaTime;
+    
+        // Start a dash when close enough and cooldown expired
+        if (buggy.dashCooldown <= 0 && Math.abs(distanceToTarget) < 200 && Math.random() < 0.005) {
+            buggy.isDashing = true;
+            buggy.dashDuration = 1000; // 1 second dash
+            buggy.dashCooldown = 5000 + Math.random() * 5000; // 5-10 seconds between dashes
+        }
+    
+        // Apply dash speed boost if dashing
+        if (buggy.isDashing) {
+            buggy.x += 4 * Math.sign(distanceToTarget); // Faster movement during dash
+            buggy.dashDuration -= deltaTime;
         
+            if (buggy.dashDuration <= 0) {
+                buggy.isDashing = false;
+            }
+        }
+    
         // Occasionally shoot at player
         buggy.shootCounter -= deltaTime;
         if (buggy.shootCounter <= 0) {
-            buggy.shootCounter = 1500 + Math.random() * 1500; // 1.5-3 seconds
-            
+            buggy.shootCounter = 1200 + Math.random() * 1000; // 1.2-2.2 seconds
+        
             // Notify game to add an enemy bullet
             this.game.addEnemyBullet(buggy.x + 30, buggy.y + 10);
         }
     }
-    
+        
     spawnEnemies(deltaTime, level) {
         // Decrement spawn counters
         this.spawnCounters.ufoHigh -= deltaTime;
@@ -155,7 +184,10 @@ class EnemyManager {
             height: 30,
             type: 'buggy',
             health: 4,
-            shootCounter: 2000 + Math.random() * 1000
+            shootCounter: 2000 + Math.random() * 1000,
+            dashCooldown: 0,
+            isDashing: false,
+            dashDuration: 0
         });
     }
     
@@ -204,19 +236,53 @@ class EnemyManager {
     }
     
     drawBuggy(buggy) {
-        // Draw enemy buggy body
-        this.ctx.fillStyle = '#222222';
+        // Draw enemy buggy body - color changes when dashing to indicate aggression
+        if (buggy.isDashing) {
+            // Red tint when dashing/aggressive
+            this.ctx.fillStyle = '#550000'; 
+        } else {
+            // Normal dark color
+            this.ctx.fillStyle = '#222222';
+        }
+    
         this.ctx.fillRect(buggy.x, buggy.y, buggy.width, buggy.height);
-        
+    
         // Draw wheels
-		this.ctx.fillStyle = '#000000'; // Change from #444444 to pure black
+        this.ctx.fillStyle = '#000000'; // Pure black wheels
         this.ctx.beginPath();
         this.ctx.arc(buggy.x + 15, buggy.y + buggy.height, 8, 0, Math.PI * 2);
         this.ctx.arc(buggy.x + buggy.width - 15, buggy.y + buggy.height, 8, 0, Math.PI * 2);
         this.ctx.fill();
-        
+    
         // Draw gun
         this.ctx.fillStyle = '#666666';
         this.ctx.fillRect(buggy.x, buggy.y + 5, 10, 10);
+    
+        // Add exhaust effect when dashing
+        if (buggy.isDashing) {
+            this.ctx.fillStyle = '#FF5500';
+            this.ctx.beginPath();
+            this.ctx.moveTo(buggy.x - 5, buggy.y + buggy.height - 5);
+            this.ctx.lineTo(buggy.x - 15, buggy.y + buggy.height - 10);
+            this.ctx.lineTo(buggy.x - 10, buggy.y + buggy.height);
+            this.ctx.closePath();
+            this.ctx.fill();
+        
+            // Add smoke particles
+            this.ctx.fillStyle = 'rgba(100, 100, 100, 0.7)';
+            for (let i = 0; i < 3; i++) {
+                const size = 4 + Math.random() * 4;
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    buggy.x - 15 - (Math.random() * 10), 
+                    buggy.y + buggy.height - 5 + (Math.random() * 10 - 5),
+                    size, 0, Math.PI * 2
+                );
+                this.ctx.fill();
+            }
+        }
     }
 }
+
+// DEBUGGING, sorry...
+console.log("Loading enemies.js");

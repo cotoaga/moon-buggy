@@ -201,3 +201,6 @@ class EffectsManager {
         }, 500);
     }
 }
+
+// DEBUGGING, sorry...
+console.log("Loading effects.js");

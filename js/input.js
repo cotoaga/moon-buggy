@@ -20,24 +20,29 @@ class InputManager {
         window.addEventListener('keydown', this.handleKeyDown.bind(this));
         window.addEventListener('keyup', this.handleKeyUp.bind(this));
         
-    	// Set up God Mode toggle
+        // Set up God Mode toggle
         const godModeElement = document.getElementById('godMode');
         if (godModeElement) {
+            godModeElement.textContent = `God Mode: ${this.game.godMode ? 'ON' : 'OFF'}`;
             godModeElement.addEventListener('click', () => {
-                this.game.godMode = !this.game.godMode;
-                godMode = this.game.godMode; // Update the global variable
+                this.toggleGodMode();
             });
         }
-		// Set up Freeze Mode toggle
-		const freezeModeElement = document.getElementById('freezeMode');
-		if (freezeModeElement) {
-		    freezeModeElement.addEventListener('click', () => {
-		        this.game.freezeMode = !this.game.freezeMode;
-		        freezeModeElement.textContent = `Freeze: ${this.game.freezeMode ? 'ON' : 'OFF'}`;
-		    });
-		}
-		
+        
+        // Set up Freeze Mode toggle
+        const freezeModeElement = document.getElementById('freezeMode');
+        if (freezeModeElement) {
+            freezeModeElement.addEventListener('click', () => {
+                this.game.freezeMode = !this.game.freezeMode;
+                freezeModeElement.textContent = `Freeze: ${this.game.freezeMode ? 'ON' : 'OFF'}`;
+            });
+        }
+        
         // Set up mobile controls if they exist
+        this.setupMobileControls();
+    }
+    
+    setupMobileControls() {
         const leftBtn = document.getElementById('leftBtn');
         const rightBtn = document.getElementById('rightBtn');
         const jumpBtn = document.getElementById('jumpBtn');
@@ -57,25 +62,33 @@ class InputManager {
         
         if (jumpBtn) {
             jumpBtn.addEventListener('touchstart', () => { 
-                this.game.player.jump();
+                if (this.game.player) {
+                    this.game.player.jump();
+                }
             });
         }
         
         if (shootBtn) {
             shootBtn.addEventListener('touchstart', () => { 
-                this.game.player.shoot();
+                if (this.game.player) {
+                    this.game.player.shoot();
+                }
             });
         }
         
         if (upBtn) {
             upBtn.addEventListener('touchstart', () => { 
-                this.game.player.shootUp();
+                if (this.game.player) {
+                    this.game.player.shootUp();
+                }
             });
         }
         
         if (mineBtn) {
             mineBtn.addEventListener('touchstart', () => { 
-                this.game.player.dropMine();
+                if (this.game.player) {
+                    this.game.player.dropMine();
+                }
             });
         }
     }
@@ -92,31 +105,45 @@ class InputManager {
                 this.keys.right = true;
                 break;
             case 'Space':
-                if (this.game.gameRunning) {
+                if (this.game.gameRunning && this.game.player) {
                     this.game.player.jump();
                 }
                 break;
             case 'KeyZ':
             case 'KeyP':
-                if (this.game.gameRunning) {
+                if (this.game.gameRunning && this.game.player) {
                     this.game.player.shoot();
                 }
                 break;
             case 'KeyO':
             case 'ArrowUp':
-                if (this.game.gameRunning) {
+                if (this.game.gameRunning && this.game.player) {
                     this.game.player.shootUp();
                 }
                 break;
             case 'KeyK':
             case 'KeyM':
-                if (this.game.gameRunning) {
+                if (this.game.gameRunning && this.game.player) {
                     this.game.player.dropMine();
                 }
                 break;
             case 'KeyR':
                 if (!this.game.gameRunning) {
                     this.restartGame();
+                }
+                break;
+            case 'KeyG':
+                // Toggle God Mode with G key
+                this.toggleGodMode();
+                break;
+            case 'KeyF':
+                // Toggle Freeze Mode with F key
+                if (this.game) {
+                    this.game.freezeMode = !this.game.freezeMode;
+                    const freezeModeElement = document.getElementById('freezeMode');
+                    if (freezeModeElement) {
+                        freezeModeElement.textContent = `Freeze: ${this.game.freezeMode ? 'ON' : 'OFF'}`;
+                    }
                 }
                 break;
         }
@@ -136,37 +163,21 @@ class InputManager {
         }
     }
     
+    toggleGodMode() {
+        if (this.game) {
+            this.game.godMode = !this.game.godMode;
+            window.godMode = this.game.godMode; // Update global variable
+            
+            const godModeElement = document.getElementById('godMode');
+            if (godModeElement) {
+                godModeElement.textContent = `God Mode: ${this.game.godMode ? 'ON' : 'OFF'}`;
+            }
+        }
+    }
+    
     restartGame() {
-        // Reset game state
-        this.game.gameRunning = true;
-        this.game.level = 1;
-        this.game.score = 0;
-        this.game.gameTime = 0;
-        
-        // Reset player
-        this.game.player.x = 200;
-        this.game.player.y = GAME_HEIGHT - GROUND_HEIGHT - PLAYER_HEIGHT;
-        this.game.player.velocityY = 0;
-        this.game.player.isJumping = false;
-        this.game.player.lives = 3;
-        this.game.player.invulnerable = 0;
-        this.game.player.bullets = [];
-        
-        // Reset terrain
-        this.game.terrain.levelProgress = 0;
-        this.game.terrain.currentSection = 'A';
-        this.game.terrain.obstacles = [];
-        this.game.terrain.mines = [];
-        
-        // Reset enemies
-        this.game.enemies.enemies = [];
-        
-        // Reset spawn counters
-        this.game.enemies.spawnCounters = {
-            ufoHigh: 3000,
-            ufoMid: 5000,
-            ufoLow: 7000,
-            buggy: 10000
-        };
+        if (this.game && typeof this.game.restartGame === 'function') {
+            this.game.restartGame();
+        }
     }
 }

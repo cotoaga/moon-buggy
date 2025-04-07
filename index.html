@@ -9,14 +9,14 @@
 <body>
     <div id="gameContainer">
         <canvas id="gameCanvas" width="800" height="500"></canvas>
-		<div id="ui">
+        <div id="ui">
             <div id="lives">Lives: 3</div>
             <div id="score">Score: 0</div>
             <div id="level">Level: 1</div>
             <div id="time">Time: 0:00</div>
             <div id="godMode" style="cursor: pointer;">God Mode: ON</div>
-			<div id="freezeMode" style="cursor: pointer;">Freeze: OFF</div>
-		</div>
+            <div id="freezeMode" style="cursor: pointer;">Freeze: OFF</div>
+        </div>
         <div id="controlsInfo">
             Controls: A/S (move), Space (jump), P (shoot), O (shoot up), K (mine)
         </div>
@@ -33,13 +33,23 @@
     <!-- Load constants first -->
     <script src="js/constants.js"></script>
     
-    <!-- Load core modules -->
+    <!-- Load player modules -->
+    <script src="js/player-health.js"></script>
+    <script src="js/player-weapons.js"></script>
+    <script src="js/player-movement.js"></script>
+    <script src="js/player-core.js"></script>
+    
+    <!-- Load terrain modules -->
+    <script src="js/mines.js"></script>
+    <script src="js/obstacles.js"></script>
+    <script src="js/terrain-generator.js"></script>
+    <script src="js/terrain-core.js"></script>
+    
+    <!-- Load other core modules -->
     <script src="js/effects.js"></script>
     <script src="js/input.js"></script>
     <script src="js/collision.js"></script>
     <script src="js/parallax.js"></script>
-    <script src="js/terrain.js"></script>
-    <script src="js/player.js"></script>
     <script src="js/enemies.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/levels.js"></script>

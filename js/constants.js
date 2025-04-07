@@ -10,11 +10,13 @@ const PLAYER_SPEED = 5;
 let SCROLL_SPEED = 3;
 const PARALLAX_NEAR = 0.6;
 const PARALLAX_FAR = 0.3;
-const GOD_MODE = false;
+const GROUND_ROCK_WIDTH = 90;
+const GROUND_ROCK_HEIGHT = 80;
+const GROUND_ROCK_PROBABILITY = 0.02;
+const GROUND_ROCK_PROBABILITY_2 = 0.1;
 
-// Obstacle types
+// Obstacle types - removed CRATER type since we're using ground craters only
 const OBSTACLE_TYPES = {
-    CRATER: 'crater',
     ROCK: 'rock',
     MINE: 'mine'
 };
@@ -41,5 +43,6 @@ const BASE_SPAWN_TIME = {
     buggy: 20000
 };
 
-// God-Mode-Switch
-let godMode = false; // Now a variable that can be toggled
+// Store godMode as a global window property to maintain state
+// Initialize it if it doesn't exist
+window.godMode = window.godMode || false;

@@ -14,8 +14,8 @@ class ParallaxManager {
         this.generateStars();
         
         // Generate mountains with increased height for back mountains
-        this.frontMountains = this.generateMountainRange(36, 100, 150, 0.8);
-        this.backMountains = this.generateMountainRange(24, 120, 180, 0.6); // Taller back mountains
+        this.generateMountainRange(36, 100, 150, 0.8, this.frontMountains);
+        this.generateMountainRange(24, 120, 180, 0.6, this.backMountains); // Taller back mountains
     }
     
     generateStars() {
@@ -32,13 +32,14 @@ class ParallaxManager {
         }
     }
     
-    generateMountainRange(peakCount, minHeight, maxHeight, roughness) {
+    generateMountainRange(peakCount, minHeight, maxHeight, roughness, mountainArray) {
         // Full level length (12 sections)
         const totalWidth = 800 * 12; // sectionWidth * levelLength
         const segments = peakCount * 12; // More segments for smoother mountains
         const segmentWidth = totalWidth / segments;
         
-        let points = [];
+        mountainArray.length = 0; // Clear existing mountains
+        
         let lastY = GAME_HEIGHT - GROUND_HEIGHT - (minHeight + maxHeight) / 2;
         
         // Generate all points for one complete level
@@ -58,7 +59,7 @@ class ParallaxManager {
                 y = Math.max(GAME_HEIGHT - GROUND_HEIGHT - maxHeight - peakHeight, y - peakHeight);
             }
             
-            points.push({ x, y });
+            mountainArray.push({ x, y });
             lastY = y;
         }
         
@@ -66,16 +67,14 @@ class ParallaxManager {
         const smoothFactor = 5; // Number of points to smooth at each end
         for (let i = 0; i < smoothFactor; i++) {
             const weight = i / smoothFactor;
-            const startPoint = points[i];
-            const endPoint = points[points.length - smoothFactor + i];
+            const startPoint = mountainArray[i];
+            const endPoint = mountainArray[mountainArray.length - smoothFactor + i];
             
             // Blend the heights
             const avgY = startPoint.y * (1 - weight) + endPoint.y * weight;
             startPoint.y = avgY;
             endPoint.y = avgY;
         }
-        
-        return points;
     }
     
     update(deltaTime, levelProgress) {
@@ -241,3 +240,6 @@ class ParallaxManager {
         this.ctx.fill();
     }
 }
+
+// DEBUGGING, sorry...
+console.log("Loading parallax.js");

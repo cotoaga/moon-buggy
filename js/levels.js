@@ -113,3 +113,6 @@ class LevelManager {
         return this.getCurrentLevelConfig().description;
     }
 }
+
+// DEBUGGING, sorry...
+console.log("Loading levels.js");
