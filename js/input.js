@@ -32,6 +32,7 @@ class InputManager {
         // Set up Freeze Mode toggle
         const freezeModeElement = document.getElementById('freezeMode');
         if (freezeModeElement) {
+            freezeModeElement.textContent = `Freeze: ${this.game.freezeMode ? 'ON' : 'OFF'}`;
             freezeModeElement.addEventListener('click', () => {
                 this.game.freezeMode = !this.game.freezeMode;
                 freezeModeElement.textContent = `Freeze: ${this.game.freezeMode ? 'ON' : 'OFF'}`;
@@ -94,6 +95,8 @@ class InputManager {
     }
     
     handleKeyDown(event) {
+        if (!this.game) return;
+        
         switch (event.code) {
             case 'KeyA':
             case 'ArrowLeft':
@@ -150,6 +153,8 @@ class InputManager {
     }
     
     handleKeyUp(event) {
+        if (!this.game) return;
+        
         switch (event.code) {
             case 'KeyA':
             case 'ArrowLeft':
@@ -164,19 +169,32 @@ class InputManager {
     }
     
     toggleGodMode() {
-        if (this.game) {
-            this.game.godMode = !this.game.godMode;
-            window.godMode = this.game.godMode; // Update global variable
+        if (!this.game) return;
+        
+        // Toggle god mode
+        this.game.godMode = !this.game.godMode;
+        
+        // Update global variable to ensure consistency
+        window.godMode = this.game.godMode;
+        
+        // Update UI
+        const godModeElement = document.getElementById('godMode');
+        if (godModeElement) {
+            godModeElement.textContent = `God Mode: ${this.game.godMode ? 'ON' : 'OFF'}`;
             
-            const godModeElement = document.getElementById('godMode');
-            if (godModeElement) {
-                godModeElement.textContent = `God Mode: ${this.game.godMode ? 'ON' : 'OFF'}`;
-            }
+            // Visual feedback for toggle
+            godModeElement.style.color = this.game.godMode ? '#00FF00' : '#FFFFFF';
+            setTimeout(() => {
+                godModeElement.style.color = '';
+            }, 300);
         }
+        
+        console.log(`God Mode ${this.game.godMode ? 'enabled' : 'disabled'}`);
     }
     
     restartGame() {
-        if (this.game && typeof this.game.restartGame === 'function') {
+        if (!this.game) return;
+        if (typeof this.game.restartGame === 'function') {
             this.game.restartGame();
         }
     }

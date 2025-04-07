@@ -1,4 +1,4 @@
-// ui.js - HUD, scores, lives display
+// ui.js - HUD, scores, lives display - FIXED with standardized bars
 class UIManager {
     constructor(game) {
         this.game = game;
@@ -16,87 +16,117 @@ class UIManager {
         document.getElementById('time').textContent = 
             `Time: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 
-        // Draw God Mode indicator
+        // Update God Mode indicator
         document.getElementById('godMode').textContent = `God Mode: ${this.game.godMode ? 'ON' : 'OFF'}`;
-
-        // Draw current section indicator
-        this.drawSectionIndicator();
         
-        // Get shield and energy values safely
-        const shield = this.game.player ? this.game.player.health.shield : 100;
-        const energy = this.game.player ? this.game.player.health.energy : 100;
-        
-        // Draw energy bar - moved to upper right corner
-        const barWidth = 100;
+        // Draw all status bars in the upper right with consistent style
+        this.drawStatusBars();
+    }
+    
+    drawStatusBars() {
+        // Common bar dimensions and positioning
+        const barWidth = 150;
         const barHeight = 10;
         const barX = GAME_WIDTH - barWidth - 10;
+        const labelOffsetX = 10; // Space between label and bar
         
-        // Energy bar
-        this.ctx.fillStyle = '#333333';
-        this.ctx.fillRect(barX, 70, barWidth, barHeight);
-        this.ctx.fillStyle = '#FFFF00';
-        this.ctx.fillRect(barX, 70, energy, barHeight);
+        // Get values safely
+        const shield = this.game.player ? this.game.player.health.shield : 100;
+        const energy = this.game.player ? this.game.player.health.energy : 100;
+        const progress = this.game.terrain ? this.game.terrain.levelProgress : 0;
         
-        // Energy label
-        this.ctx.fillStyle = '#FFFFFF';
+        // Common text style
         this.ctx.font = '8px "Press Start 2P"';
         this.ctx.textAlign = 'right';
-        this.ctx.fillText('ENERGY', barX - 5, 78);
-
-        // Shield bar - placed above energy bar
+        
+        // 1. SECTION PROGRESS BAR - Top position
+        const sectionY = 30;
+        
+        // Section label
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.fillText('SECTION ' + (this.game.terrain ? this.game.terrain.currentSection : 'A'), barX - labelOffsetX, sectionY + 8); // Aligned with bar
+        
+        // Section progress background
         this.ctx.fillStyle = '#333333';
-        this.ctx.fillRect(barX, 50, barWidth, barHeight);
-        this.ctx.fillStyle = '#00FFFF';
-        this.ctx.fillRect(barX, 50, shield, barHeight);
+        this.ctx.fillRect(barX, sectionY, barWidth, barHeight);
+        
+        // Section progress fill
+        this.ctx.fillStyle = '#00FF00';
+        this.ctx.fillRect(barX, sectionY, barWidth * (progress / 100), barHeight);
+        
+        // Section progress border
+        this.ctx.strokeStyle = '#FFFFFF';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(barX, sectionY, barWidth, barHeight);
+        
+        // 2. SHIELD BAR - Middle position
+        const shieldY = sectionY + barHeight + 15;
         
         // Shield label
         this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.fillText('SHIELD', barX - 5, 58);
-    }
+        this.ctx.fillText('SHIELD', barX - labelOffsetX, shieldY + 8);
         
-    drawSectionIndicator() {
-        // Display current section
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = '16px "Press Start 2P"';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(`SECTION ${this.game.terrain ? this.game.terrain.currentSection : 'A'}`, GAME_WIDTH/2, 30);
-        
-        // Draw progress bar
-        const barWidth = 200;
-        const barHeight = 10;
-        const x = GAME_WIDTH/2 - barWidth/2;
-        const y = 40;
-        
-        // Background
+        // Shield background
         this.ctx.fillStyle = '#333333';
-        this.ctx.fillRect(x, y, barWidth, barHeight);
+        this.ctx.fillRect(barX, shieldY, barWidth, barHeight);
         
-        // Progress
-        const progress = this.game.terrain ? this.game.terrain.levelProgress : 0;
-        this.ctx.fillStyle = '#00FF00';
-        this.ctx.fillRect(x, y, barWidth * (progress / 100), barHeight);
+        // Shield fill
+        this.ctx.fillStyle = '#00FFFF';
+        this.ctx.fillRect(barX, shieldY, barWidth * (shield / 100), barHeight);
         
-        // Border
-        this.ctx.strokeStyle = '#FFFFFF';
+        // Shield border
+        this.ctx.strokeStyle = '#00CCCC';
         this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(x, y, barWidth, barHeight);
+        this.ctx.strokeRect(barX, shieldY, barWidth, barHeight);
+        
+        // 3. ENERGY BAR - Bottom position
+        const energyY = shieldY + barHeight + 15;
+        
+        // Energy label
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.fillText('ENERGY', barX - labelOffsetX, energyY + 8);
+        
+        // Energy background
+        this.ctx.fillStyle = '#333333';
+        this.ctx.fillRect(barX, energyY, barWidth, barHeight);
+        
+        // Energy fill
+        this.ctx.fillStyle = '#FFFF00';
+        this.ctx.fillRect(barX, energyY, barWidth * (energy / 100), barHeight);
+        
+        // Energy border
+        this.ctx.strokeStyle = '#CCCC00';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(barX, energyY, barWidth, barHeight);
     }
         
     showLevelMessage() {
-        // Create a level message div
+        // Create a level message overlay for better visibility
+        const overlay = document.createElement('div');
+        overlay.className = 'level-message-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.style.zIndex = '1000';
+        
+        // Create the message box
         const levelMsg = document.createElement('div');
-        levelMsg.style.position = 'absolute';
-        levelMsg.style.top = '50%';
-        levelMsg.style.left = '50%';
-        levelMsg.style.transform = 'translate(-50%, -50%)';
         levelMsg.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
         levelMsg.style.color = '#FFFF00';
-        levelMsg.style.padding = '20px';
+        levelMsg.style.padding = '30px';
         levelMsg.style.borderRadius = '10px';
         levelMsg.style.fontSize = '24px';
         levelMsg.style.fontWeight = 'bold';
         levelMsg.style.fontFamily = '"Press Start 2P", monospace';
-        levelMsg.style.zIndex = '10000';
+        levelMsg.style.textAlign = 'center';
+        levelMsg.style.border = '2px solid #FFFF00';
+        levelMsg.style.boxShadow = '0 0 20px rgba(255, 255, 0, 0.5)';
         levelMsg.textContent = `LEVEL ${this.game.level}!`;
         
         // Add description of new enemies
@@ -124,17 +154,20 @@ class UIManager {
         // Add the description
         const descElem = document.createElement('div');
         descElem.style.fontSize = '16px';
-        descElem.style.marginTop = '10px';
+        descElem.style.marginTop = '20px';
         descElem.textContent = description;
         levelMsg.appendChild(descElem);
         
-        // Add to document
-        document.body.appendChild(levelMsg);
+        // Add message to overlay
+        overlay.appendChild(levelMsg);
         
-        // Remove after a few seconds
+        // Add to document
+        document.body.appendChild(overlay);
+        
+        // Auto-remove after a few seconds
         setTimeout(() => {
-            if (document.body.contains(levelMsg)) {
-                levelMsg.remove();
+            if (document.body.contains(overlay)) {
+                overlay.remove();
             }
         }, 3000);
     }

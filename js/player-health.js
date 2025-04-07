@@ -1,4 +1,4 @@
-// player-health.js - Player health and status effects
+// player-health.js - Player health and status effects - FIXED
 class PlayerHealth {
     constructor(player) {
         this.player = player;
@@ -19,6 +19,7 @@ class PlayerHealth {
         // Death message tracking
         this.deathMessageShown = false;
         this._deathMessageElements = null; // To store references to dialog elements
+        this._deathMessageTimeout = null; // To store timeout reference
     }
     
     initialize() {
@@ -26,7 +27,10 @@ class PlayerHealth {
         this.lives = 3;
         this.shield = 100;
         this.energy = 100;
-        this.invulnerable = 0;
+        this.invulnerable = 2000; // 2 seconds of invulnerability on start
+        
+        // Clear any existing death message
+        this.removeDeathMessage();
         this.deathMessageShown = false;
     }
     
@@ -65,21 +69,25 @@ class PlayerHealth {
             // Instant death from craters regardless of shield/godmode
             this.lives--;
             this.invulnerable = 2000;
-            this.showDeathMessage("You drove full speed ahead into a crater. That was unnecessarily dumb and even your sophisticated shields could not save you from your own stupidity.");
+            
+            // Only show death message if game is still running
+            if (this.game && this.game.gameRunning) {
+                this.showDeathMessage("You drove full speed ahead into a crater. That was unnecessarily dumb and even your sophisticated shields could not save you from your own stupidity.");
+            }
             
             if (this.lives <= 0) {
-                this.game.gameRunning = false;
+                if (this.game) this.game.gameRunning = false;
             }
         }
         else if (hitType === OBSTACLE_TYPES.ROCK && this.shield > 0) {
             // Rocks drain shield
             this.shield -= 25;
             this.invulnerable = 500;
-            if (this.game.effects) {
+            if (this.game && this.game.effects) {
                 this.game.effects.createShieldEffect(this.player.x, this.player.y, this.player.width, this.player.height);
             }
         }
-        else if (this.game.godMode) {
+        else if (this.game && this.game.godMode) {
             // God mode prevents damage from everything except craters
             this.invulnerable = 1000;
             if (this.game.effects) {
@@ -90,12 +98,12 @@ class PlayerHealth {
             // No shield or god mode, lose a life
             this.lives--;
             this.invulnerable = 2000;
-            if (this.game.effects) {
+            if (this.game && this.game.effects) {
                 this.game.effects.createShieldEffect(this.player.x, this.player.y, this.player.width, this.player.height);
             }
             
             if (this.lives <= 0) {
-                this.game.gameRunning = false;
+                if (this.game) this.game.gameRunning = false;
             }
         }
     }
@@ -107,9 +115,8 @@ class PlayerHealth {
         // Set flag
         this.deathMessageShown = true;
         
-        // Remove any existing death messages
-        const existingMsgs = document.querySelectorAll('.death-message-overlay');
-        existingMsgs.forEach(msg => document.body.removeChild(msg));
+        // Remove any existing death messages first
+        this.removeDeathMessage();
         
         // Create a full-screen overlay div that captures all clicks
         const overlay = document.createElement('div');
@@ -146,7 +153,8 @@ class PlayerHealth {
         
         // Button
         const button = document.createElement('button');
-        button.textContent = 'Try again harder';
+        button.id = 'deathMessageButton';
+        button.textContent = 'Continue';
         button.style.background = '#FF3333';
         button.style.color = '#FFF';
         button.style.border = 'none';
@@ -169,39 +177,51 @@ class PlayerHealth {
         // Store references to both elements for easy cleanup
         this._deathMessageElements = { overlay, dialog, button };
         
-        // Simple click handler function that we keep a reference to for removal
-        const handleClick = () => {
-            if (document.body.contains(overlay)) {
-                document.body.removeChild(overlay);
-            }
-            this.deathMessageShown = false;
+        // Define a handler function for dismissing the dialog
+        const dismissHandler = () => {
+            this.removeDeathMessage();
             
-            // Remove the handler to prevent memory leaks
-            button.removeEventListener('click', handleClick);
-            
-            // Restart game
-            if (this.game && typeof this.game.restartGame === 'function') {
-                this.game.restartGame();
+            // Clear timeout if it exists
+            if (this._deathMessageTimeout) {
+                clearTimeout(this._deathMessageTimeout);
+                this._deathMessageTimeout = null;
             }
         };
         
-        // Add click event to both button and overlay
-        button.addEventListener('click', handleClick);
+        // Add click event to button with direct function to avoid reference issues
+        button.onclick = dismissHandler;
         
-        // Also close when clicking anywhere on the overlay (optional)
+        // Also close when clicking directly on the overlay (not its children)
         overlay.addEventListener('click', (e) => {
-            // Only trigger if clicking directly on the overlay, not its children
             if (e.target === overlay) {
-                handleClick();
+                dismissHandler();
             }
         });
         
-        // Auto-close after 10 seconds
-        setTimeout(() => {
+        // Auto-close after 5 seconds
+        this._deathMessageTimeout = setTimeout(dismissHandler, 5000);
+    }
+    
+    // Properly remove death message
+    removeDeathMessage() {
+        // Clear the flag immediately
+        this.deathMessageShown = false;
+        
+        // Remove any existing death message elements
+        const overlays = document.querySelectorAll('.death-message-overlay');
+        overlays.forEach(overlay => {
             if (document.body.contains(overlay)) {
                 document.body.removeChild(overlay);
-                this.deathMessageShown = false;
             }
-        }, 10000);
+        });
+        
+        // Clear element references
+        this._deathMessageElements = null;
+        
+        // Clear timeout if it exists
+        if (this._deathMessageTimeout) {
+            clearTimeout(this._deathMessageTimeout);
+            this._deathMessageTimeout = null;
+        }
     }
 }
