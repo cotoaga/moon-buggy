@@ -127,93 +127,94 @@ class ObstacleManager {
         }
     }
     
-    drawRock(obstacle) {
-        // Draw more realistic rocks
-        const rockCenterX = obstacle.x + obstacle.width/2;
-        const rockBottomY = obstacle.y + obstacle.height;
-        
-        // Rock base (dark gray)
-        this.ctx.fillStyle = '#555555';
-        this.ctx.beginPath();
-        this.ctx.moveTo(obstacle.x, rockBottomY);
-        this.ctx.lineTo(obstacle.x + obstacle.width*0.3, rockBottomY - obstacle.height*0.5);
-        this.ctx.lineTo(obstacle.x + obstacle.width*0.7, rockBottomY - obstacle.height*0.7);
-        this.ctx.lineTo(obstacle.x + obstacle.width, rockBottomY);
-        this.ctx.closePath();
-        this.ctx.fill();
-        
-        // Rock highlights (lighter gray)
-        this.ctx.fillStyle = '#999999';
-        this.ctx.beginPath();
-        this.ctx.moveTo(obstacle.x + obstacle.width*0.3, rockBottomY - obstacle.height*0.5);
-        this.ctx.lineTo(obstacle.x + obstacle.width*0.5, rockBottomY - obstacle.height*0.9);
-        this.ctx.lineTo(obstacle.x + obstacle.width*0.7, rockBottomY - obstacle.height*0.7);
-        this.ctx.closePath();
-        this.ctx.fill();
-        
-        // Shadow
-        this.ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        this.ctx.beginPath();
-        this.ctx.ellipse(rockCenterX, rockBottomY - 2, obstacle.width/2, 4, 0, 0, Math.PI*2);
-        this.ctx.fill();
-    }
-    
-    drawCrater(obstacle) {
-        // Draw small crater obstacles (similar to ground craters but smaller)
-        obstacle.width = Math.max(obstacle.width, 30); // Ensure craters are visible
-        
-        // Main crater bowl
-        this.ctx.fillStyle = '#1A1A1A';
-        this.ctx.beginPath();
-        this.ctx.arc(
-            obstacle.x + obstacle.width/2, 
-            obstacle.y + obstacle.height/2, 
-            obstacle.width/2,
-            0, Math.PI*2
-        );
-        this.ctx.fill();
-        
-        // Inner crater (deeper part)
-        this.ctx.fillStyle = '#0F0F0F';
-        this.ctx.beginPath();
-        this.ctx.arc(
-            obstacle.x + obstacle.width/2, 
-            obstacle.y + obstacle.height/2 + 3, 
-            obstacle.width/3,
-            0, Math.PI*2
-        );
-        this.ctx.fill();
-        
-        // Add impact marks (small lines radiating from crater)
-        this.ctx.strokeStyle = '#444444';
-        this.ctx.lineWidth = 1;
-        for (let i = 0; i < 5; i++) {
-            const angle = (Math.PI / 3) * i;
-            const length = obstacle.width * 0.3;
-            this.ctx.beginPath();
-            this.ctx.moveTo(
-                obstacle.x + obstacle.width/2, 
-                obstacle.y + obstacle.height/2
-            );
-            this.ctx.lineTo(
-                obstacle.x + obstacle.width/2 + Math.cos(angle) * length,
-                obstacle.y + obstacle.height/2 + Math.sin(angle) * length
-            );
-            this.ctx.stroke();
-        }
-        
-        // Add shadow/highlight
-        this.ctx.strokeStyle = '#444444';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.arc(
-            obstacle.x + obstacle.width/2, 
-            obstacle.y + obstacle.height/2, 
-            obstacle.width/2 - 2,
-            Math.PI*1.7, Math.PI*0.3
-        );
-        this.ctx.stroke();
-    }
+	drawRock(obstacle) {
+	    this.ctx.save();
+
+	    const offsetY = 20; // sink rock into ground
+	    const { x, y, width, height } = obstacle;
+	    const topY = y + offsetY;
+
+	    // Color palette
+	    const baseColor = '#4A5A66';
+	    const darkFacet = '#2C3E50';
+	    const midFacet = '#556670';
+	    const lightFacet = '#7F8C8D';
+
+	    // Base polygon
+	    this.ctx.fillStyle = baseColor;
+	    this.ctx.beginPath();
+	    this.ctx.moveTo(x + width * 0.1, topY + height * 0.6);
+	    this.ctx.lineTo(x + width * 0.3, topY + height * 0.2);
+	    this.ctx.lineTo(x + width * 0.6, topY + height * 0.1);
+	    this.ctx.lineTo(x + width * 0.8, topY + height * 0.4);
+	    this.ctx.lineTo(x + width * 0.7, topY + height * 0.8);
+	    this.ctx.lineTo(x + width * 0.2, topY + height * 0.9);
+	    this.ctx.closePath();
+	    this.ctx.fill();
+
+	    // Dark facet
+	    this.ctx.fillStyle = darkFacet;
+	    this.ctx.beginPath();
+	    this.ctx.moveTo(x + width * 0.3, topY + height * 0.2);
+	    this.ctx.lineTo(x + width * 0.5, topY + height * 0.3);
+	    this.ctx.lineTo(x + width * 0.4, topY + height * 0.7);
+	    this.ctx.lineTo(x + width * 0.2, topY + height * 0.9);
+	    this.ctx.closePath();
+	    this.ctx.fill();
+
+	    // Light facet
+	    this.ctx.fillStyle = lightFacet;
+	    this.ctx.beginPath();
+	    this.ctx.moveTo(x + width * 0.6, topY + height * 0.1);
+	    this.ctx.lineTo(x + width * 0.8, topY + height * 0.4);
+	    this.ctx.lineTo(x + width * 0.5, topY + height * 0.3);
+	    this.ctx.closePath();
+	    this.ctx.fill();
+
+	    // Midtone facet
+	    this.ctx.fillStyle = midFacet;
+	    this.ctx.beginPath();
+	    this.ctx.moveTo(x + width * 0.5, topY + height * 0.3);
+	    this.ctx.lineTo(x + width * 0.4, topY + height * 0.7);
+	    this.ctx.lineTo(x + width * 0.7, topY + height * 0.8);
+	    this.ctx.lineTo(x + width * 0.8, topY + height * 0.4);
+	    this.ctx.closePath();
+	    this.ctx.fill();
+
+	    this.ctx.restore();
+	}
+		    
+	drawCrater(ctx, x, y, radius) {
+	    ctx.save();
+
+	    // Outer shadowed ring
+	    const gradient = ctx.createRadialGradient(x, y, radius * 0.3, x, y, radius);
+	    gradient.addColorStop(0, '#3A3A3A');
+	    gradient.addColorStop(1, '#1A1A1A');
+
+	    ctx.fillStyle = gradient;
+	    ctx.beginPath();
+	    ctx.arc(x, y, radius, 0, Math.PI, true);
+	    ctx.fill();
+
+	    // Inner core – lighter dust
+	    ctx.fillStyle = '#444';
+	    ctx.beginPath();
+	    ctx.arc(x, y, radius * 0.7, 0, Math.PI, true);
+	    ctx.fill();
+
+	    // Optional: draw cracks
+	    ctx.strokeStyle = '#222';
+	    ctx.lineWidth = 1;
+	    ctx.beginPath();
+	    ctx.moveTo(x - radius * 0.4, y);
+	    ctx.lineTo(x - radius * 0.1, y - 5);
+	    ctx.moveTo(x + radius * 0.1, y - 3);
+	    ctx.lineTo(x + radius * 0.3, y);
+	    ctx.stroke();
+
+	    ctx.restore();
+	}
     
     drawMine(obstacle) {
         // Draw mine as a rectangular device with blinking light

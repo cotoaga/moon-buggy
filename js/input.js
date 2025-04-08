@@ -102,7 +102,15 @@ class InputManager {
             case 'ArrowLeft':
                 this.keys.left = true;
                 break;
-            case 'KeyD':
+			case 'KeyD':
+			    // Toggle debug mode when Ctrl+D is pressed
+			    if (event.ctrlKey) {
+			        if (this.game) {
+			            this.game.toggleDebug();
+			        }
+			        event.preventDefault(); // Prevent browser's default Ctrl+D behavior
+			    }
+			    break;			
             case 'KeyS':
             case 'ArrowRight':
                 this.keys.right = true;

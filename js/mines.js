@@ -110,34 +110,6 @@ class MineManager {
                     );
                     this.ctx.fill();
                 }
-            } else {
-                // Inactive: timer display
-                this.ctx.fillStyle = '#223366';
-                this.ctx.beginPath();
-                this.ctx.arc(
-                    mine.x + mineWidth/2,
-                    mine.y + mine.height - mineHeight - 5,
-                    4,
-                    0, Math.PI*2
-                );
-                this.ctx.fill();
-                
-                // Timer indicator
-                const timerPercentage = Math.max(0, Math.min(1, 1 - (mine.timer / 1000)));
-                if (timerPercentage > 0) {
-                    this.ctx.fillStyle = '#3366CC';
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(mine.x + mineWidth/2, mine.y + mine.height - mineHeight - 5);
-                    this.ctx.arc(
-                        mine.x + mineWidth/2,
-                        mine.y + mine.height - mineHeight - 5,
-                        6,
-                        -Math.PI/2,
-                        -Math.PI/2 + (Math.PI * 2 * timerPercentage)
-                    );
-                    this.ctx.closePath();
-                    this.ctx.fill();
-                }
             }
         }
         
@@ -160,8 +132,7 @@ class MineManager {
             y: y,
             width: 20,
             height: 20,
-            timer: 1000, // Activation timer
-            active: false,
+            active: true,
             explode: false // Flag for explosion state
         });
     }

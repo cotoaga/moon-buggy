@@ -1,9 +1,15 @@
-// engine.js - Core game loop and initialization
+// engine.js - Core game loop and initialization with double buffering
 class Game {
     constructor() {
         // Get the canvas and context
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        
+        // Create offscreen canvas for double buffering
+        this.offscreenCanvas = document.createElement('canvas');
+        this.offscreenCanvas.width = this.canvas.width;
+        this.offscreenCanvas.height = this.canvas.height;
+        this.offscreenCtx = this.offscreenCanvas.getContext('2d');
         
         // Game state
         this.gameRunning = true;
@@ -25,6 +31,9 @@ class Game {
         this.ui = null;
         this.levels = null;
         this.collision = null;
+		
+		// Add this property to the Game class constructor
+		this.debugMode = false; // Will be toggled with a key
     }
     
     init() {
@@ -71,6 +80,16 @@ class Game {
         if (this.levels) {
             this.levels.setLevel(1);
         }
+		
+		// Add this to engine.js init method
+		this.updateContextReferences = function() {
+		    if (this.parallax) this.parallax.ctx = this.ctx;
+		    if (this.terrain) this.terrain.ctx = this.ctx;
+		    if (this.player) this.player.ctx = this.ctx;
+		    if (this.enemies) this.enemies.ctx = this.ctx;
+		    if (this.effects) this.effects.ctx = this.ctx;
+		    if (this.ui) this.ui.ctx = this.ctx;
+		};
         
         console.log("Game initialized, starting game loop");
         
@@ -117,9 +136,6 @@ class Game {
             const maxDelta = 100; // ms
             const limitedDelta = Math.min(deltaTime, maxDelta);
             
-            // Clear canvas - MOVED this to be the single source of clearing
-            this.ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-            
             if (this.gameRunning && !this.freezeMode) {
                 // Update game elements
                 this.updateGame(limitedDelta);
@@ -128,8 +144,11 @@ class Game {
                 this.frameCount++;
             }
 
-            // Always draw the game
-            this.drawGame();
+            // Double buffering: draw everything to offscreen canvas first
+            this.renderOffscreen(deltaTime);
+            
+            // Then copy the completed frame to the visible canvas
+            this.presentToScreen();
             
             // Draw game over screen if game not running
             if (!this.gameRunning) {
@@ -168,17 +187,55 @@ class Game {
         
         // Check for collisions
         if (this.collision) {
-			this.collision.checkMineEnemyCollisions(); // 💣 NEW
-            this.collision.checkCollisions(); // existing collision logic
+            this.collision.checkMineEnemyCollisions();
+            this.collision.checkCollisions();
         }
         
         // Check level progression
         this.checkLevelProgression();
     }
     
-    drawGame() {
-        // REMOVED duplicate clearRect here - we only need one clear per frame
-        
+    // NEW: Draw to offscreen canvas
+	renderOffscreen(deltaTime) {
+	    // Create a fresh offscreen canvas every frame
+	    const tempCanvas = document.createElement('canvas');
+	    tempCanvas.width = GAME_WIDTH;
+	    tempCanvas.height = GAME_HEIGHT;
+	    const tempCtx = tempCanvas.getContext('2d');
+    
+	    // Store original context and set to the temporary one
+	    const originalCtx = this.ctx;
+	    this.ctx = tempCtx;
+    
+	    // Clear the temporary canvas with black
+	    this.ctx.fillStyle = '#000000';
+	    this.ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    
+	    // Propagate the context
+	    this.propagateContext();
+    
+	    // Draw the game
+		this.drawGame(deltaTime);
+    
+	    // Restore original context
+	    this.ctx = originalCtx;
+	    this.propagateContext();
+    
+	    // Store the completed frame
+	    this.completedFrame = tempCanvas;
+	}
+
+	presentToScreen() {
+	    // Clear the screen
+	    this.ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    
+	    // Draw the completed frame
+	    if (this.completedFrame) {
+	        this.ctx.drawImage(this.completedFrame, 0, 0);
+	    }
+	}
+		        
+    drawGame(deltaTime) {
         // Draw all game components in correct order (back to front)
         if (this.parallax) {
             this.parallax.draw(this.terrain ? this.terrain.levelProgress : 0);
@@ -203,6 +260,28 @@ class Game {
         if (this.ui) {
             this.ui.draw();
         }
+		
+		// Debug enemy info
+		if (this.frameCount % 300 === 0 && this.enemies) { // Every 5 seconds
+		    const enemyCounts = this.enemies.debugEnemies();
+		}
+
+		// Modify the drawGame method to add this at the end
+		// Debug overlay - only shown when debug mode is enabled
+		if (this.debugMode) {
+		    // Semi-transparent background
+		    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+		    this.ctx.fillRect(GAME_WIDTH/2 - 100, GAME_HEIGHT/2 - 60, 200, 120);
+    
+		    // Debug info
+		    this.ctx.fillStyle = '#FFFFFF';
+		    this.ctx.font = '16px "Press Start 2P"';
+		    this.ctx.textAlign = 'center';
+		    this.ctx.fillText(`DEBUG`, GAME_WIDTH/2, GAME_HEIGHT/2 - 40);
+		    this.ctx.fillText(`Frame: ${this.frameCount}`, GAME_WIDTH/2, GAME_HEIGHT/2 - 10);
+		    this.ctx.fillText(`Enemies: ${this.enemies ? this.enemies.enemies.length : 0}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 20);
+		    this.ctx.fillText(`FPS: ${Math.round(1000 / (deltaTime || 16))}`, GAME_WIDTH/2, GAME_HEIGHT/2 + 50);
+		}
     }
     
     checkLevelProgression() {
@@ -483,6 +562,32 @@ class Game {
         // Add to document
         document.body.appendChild(errorDiv);
     }
+	
+	// Add to Game class
+	propagateContext() {
+	    // Ensure all objects have the current context
+	    if (this.parallax) this.parallax.ctx = this.ctx;
+	    if (this.terrain) {
+	        this.terrain.ctx = this.ctx;
+	        if (this.terrain.obstacleManager) this.terrain.obstacleManager.ctx = this.ctx;
+	        if (this.terrain.mineManager) this.terrain.mineManager.ctx = this.ctx;
+	        if (this.terrain.generator) this.terrain.generator.ctx = this.ctx;
+	    }
+	    if (this.enemies) this.enemies.ctx = this.ctx;
+	    if (this.player) {
+	        this.player.ctx = this.ctx;
+	        if (this.player.weapons) this.player.weapons.ctx = this.ctx;
+	    }
+	    if (this.effects) this.effects.ctx = this.ctx;
+	    if (this.ui) this.ui.ctx = this.ctx;
+	}
+	
+	// Add this method to the Game class
+	toggleDebug() {
+	    this.debugMode = !this.debugMode;
+	    console.log(`Debug mode: ${this.debugMode ? 'ON' : 'OFF'}`);
+	}
+	
 }
 
 // Initialize game when the page loads

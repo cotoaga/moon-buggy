@@ -135,43 +135,53 @@ class TerrainGenerator {
         }
     }
 
-    drawCrater(x, segment) {
-        this.ctx.fillStyle = '#1A1A1A';
+	drawCrater(x, segment) {
+	    const ctx = this.ctx;
+	    const craterX = x + segment.width / 2;
+	    const craterY = GAME_HEIGHT - GROUND_HEIGHT;
+	    const outerRadius = segment.width / 2;
+	    const innerRadius = segment.width / 3;
 
-        this.ctx.beginPath();
-        this.ctx.arc(
-            x + segment.width / 2,
-            GAME_HEIGHT - GROUND_HEIGHT,
-            segment.width / 2,
-            0, Math.PI
-        );
-        this.ctx.fill();
+	    ctx.save();
 
-        this.ctx.fillStyle = '#0F0F0F';
-        this.ctx.beginPath();
-        this.ctx.arc(
-            x + segment.width / 2,
-            GAME_HEIGHT - GROUND_HEIGHT,
-            segment.width / 3,
-            0, Math.PI
-        );
-        this.ctx.fill();
+	    // === Crater depression (shadow gradient) ===
+	    const gradient = ctx.createRadialGradient(craterX, craterY, innerRadius * 0.5, craterX, craterY, outerRadius);
+	    gradient.addColorStop(0, '#444444'); // center
+	    gradient.addColorStop(1, '#1A1A1A'); // edge
+	    ctx.fillStyle = gradient;
 
-        this.ctx.strokeStyle = '#333333';
-        this.ctx.lineWidth = 1;
-        for (let i = 0; i < 5; i++) {
-            const angle = (Math.PI / 6) + i * (Math.PI / 12);
-            const length = segment.width * 0.3;
-            this.ctx.beginPath();
-            this.ctx.moveTo(
-                x + segment.width / 2,
-                GAME_HEIGHT - GROUND_HEIGHT
-            );
-            this.ctx.lineTo(
-                x + segment.width / 2 + Math.cos(angle) * length,
-                GAME_HEIGHT - GROUND_HEIGHT + Math.sin(angle) * length
-            );
-            this.ctx.stroke();
-        }
-    }
+	    ctx.beginPath();
+	    ctx.arc(craterX, craterY, outerRadius, 0, Math.PI);
+	    ctx.fill();
+
+	    // === Inner core highlight (subtle) ===
+	    ctx.fillStyle = '#2A2A2A';
+	    ctx.beginPath();
+	    ctx.arc(craterX, craterY, innerRadius, 0, Math.PI);
+	    ctx.fill();
+
+	    // === Rugged edge (simulate debris with jagged strokes) ===
+	    ctx.strokeStyle = '#333333';
+	    ctx.lineWidth = 1.5;
+	    for (let i = 0; i < 12; i++) {
+	        const angle = (Math.PI / 16) + i * (Math.PI / 12);
+	        const length = outerRadius * (0.2 + Math.random() * 0.2);
+	        ctx.beginPath();
+	        ctx.moveTo(craterX, craterY);
+	        ctx.lineTo(
+	            craterX + Math.cos(angle) * length,
+	            craterY + Math.sin(angle) * length
+	        );
+	        ctx.stroke();
+	    }
+
+	    // === Crater ridge (thin outer rim) ===
+	    ctx.strokeStyle = '#555555';
+	    ctx.lineWidth = 0.8;
+	    ctx.beginPath();
+	    ctx.arc(craterX, craterY, outerRadius, 0, Math.PI);
+	    ctx.stroke();
+
+	    ctx.restore();
+	}
 }

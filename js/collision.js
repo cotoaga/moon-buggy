@@ -20,10 +20,6 @@ class CollisionManager {
         // Check if within blast radius
         const inBlastRadius = distance < MINE_BLAST_RADIUS;
         
-        if (this.debug && inBlastRadius) {
-            console.log(`Mine at (${mineX}, ${mineY}) detected enemy at (${enemyX}, ${enemyY}), distance: ${distance}`);
-        }
-        
         return inBlastRadius;
     }
 
@@ -44,39 +40,34 @@ class CollisionManager {
                 
                 if (enemy.destroyed) continue;
                 
-                if (this.checkMineProximity(mine, enemy)) {
-                    // Trigger explosion and destroy enemy
-                    mine.explode = true;
-                    enemy.destroyed = true;
-                    
-                    // Add score
-                    if (enemy.type === 'ufo_high') {
-                        this.game.addScore(75);
-                    } else if (enemy.type === 'ufo_mid') {
-                        this.game.addScore(100);
-                    } else if (enemy.type === 'ufo_low') {
-                        this.game.addScore(150);
-                    } else if (enemy.type === 'buggy') {
-                        this.game.addScore(200);
-                    }
-                    
-                    // Create explosion effect
-                    if (this.game.effects) {
-                        this.game.effects.createExplosion(
-                            enemy.x + enemy.width / 2,
-                            enemy.y + enemy.height / 2,
-                            80,
-                            enemy.type.includes('ufo') ? 'sky' : 'buggy'
-                        );
-                    }
-                    
-                    // Remove the enemy
-                    enemies.splice(i, 1);
-                    
-                    if (this.debug) {
-                        console.log(`💥 Mine exploded enemy of type ${enemy.type}`);
-                    }
-                }
+				if (this.checkMineProximity(mine, enemy)) {
+				    mine.explode = true;
+				    enemy.destroyed = true;
+
+				    // Score by enemy type
+				    const scoreMap = {
+				        ufo_high: 75,
+				        ufo_mid: 100,
+				        ufo_low: 150,
+				        buggy: 200
+				    };
+				    this.game.addScore(scoreMap[enemy.type] || 50);
+
+				    // Proper explosion effect
+				    this.game.effects?.createExplosion(
+				        enemy.x + enemy.width / 2,
+				        enemy.y + enemy.height / 2,
+				        80,
+				        enemy.type.includes('ufo') ? 'sky' : 'buggy'
+				    );
+
+				    // Remove the enemy
+				    enemies.splice(i, 1);
+
+				    if (this.debug) {
+				        console.log(`💥 SmartMine exploded enemy of type ${enemy.type}`);
+				    }
+				}
             }
         }
     }
