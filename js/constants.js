@@ -5,7 +5,7 @@ const GROUND_HEIGHT = 50;
 const PLAYER_WIDTH = 60;
 const PLAYER_HEIGHT = 30;
 const GRAVITY = 0.6;
-const JUMP_FORCE = 15;
+const JUMP_FORCE = 18; // Increased from 15 for better crater clearing
 const PLAYER_SPEED = 5;
 let SCROLL_SPEED = 3;
 const PARALLAX_NEAR = 0.6;
@@ -14,7 +14,7 @@ const GROUND_ROCK_WIDTH = 90;
 const GROUND_ROCK_HEIGHT = 80;
 const GROUND_ROCK_PROBABILITY = 0.02;
 const GROUND_ROCK_PROBABILITY_2 = 0.1;
-const MINE_BLAST_RADIUS = 40; // adjust as needed
+const MINE_BLAST_RADIUS = 60; // Increased from 40 for better enemy detection
 
 // Obstacle types - removed CRATER type since we're using ground craters only
 const OBSTACLE_TYPES = {

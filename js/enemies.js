@@ -45,6 +45,11 @@ class EnemyManager {
     }
 
     updateUFO(ufo, deltaTime) {
+        // Store previous position for trail detection
+        ufo.prevX = ufo.x;
+        ufo.prevY = ufo.y;
+        
+        // Calculate new position based on deltaTime
         ufo.x -= (SCROLL_SPEED * 1.2) * deltaTime / 16;
 
         const zigZagAmplitude = ufo.type === 'ufo_high' ? 40 :
@@ -52,8 +57,22 @@ class EnemyManager {
         const zigZagFrequency = ufo.type === 'ufo_high' ? 0.01 :
                                  ufo.type === 'ufo_mid' ? 0.015 : 0.02;
 
+        // Calculate new Y position based on zigzag pattern
         ufo.y = ufo.baseY + Math.sin(ufo.x * zigZagFrequency) * zigZagAmplitude;
 
+        // Check if movement is too large (might cause trails)
+        const dx = ufo.x - (ufo.prevX || ufo.x);
+        const dy = ufo.y - (ufo.prevY || ufo.y);
+        const moveDist = Math.sqrt(dx*dx + dy*dy);
+        
+        // If movement is too large, break it down into smaller steps
+        if (moveDist > 5) {
+            // Cap movement to prevent large jumps that cause trailing
+            ufo.x = ufo.prevX - Math.min(Math.abs(dx), 5) * Math.sign(dx);
+            ufo.y = ufo.prevY + Math.min(Math.abs(dy), 5) * Math.sign(dy);
+        }
+
+        // Update bomb counter
         ufo.bombCounter -= deltaTime;
         if (ufo.bombCounter <= 0) {
             ufo.bombCounter = 2000 + Math.random() * 3000;
@@ -132,7 +151,9 @@ class EnemyManager {
             height: 20,
             type: type,
             health: params[type].health,
-            bombCounter: 2000 + Math.random() * 2000
+            bombCounter: 2000 + Math.random() * 2000,
+            prevX: GAME_WIDTH + 50, // Track previous position to prevent trailing
+            prevY: params[type].y    // Track previous position to prevent trailing
         });
     }
 
@@ -153,7 +174,14 @@ class EnemyManager {
     }
 
     draw() {
+        // IMPORTANT: Make sure we're not using the saved context state from elsewhere
+        this.ctx.save();
+        this.ctx.restore();
+        
+        // Draw each enemy without any lingering context changes
         this.enemies.forEach(enemy => {
+            this.ctx.save(); // Save state before drawing each enemy
+            
             switch (enemy.type) {
                 case 'ufo_high':
                 case 'ufo_mid':
@@ -164,62 +192,167 @@ class EnemyManager {
                     this.drawBuggy(enemy);
                     break;
             }
+            
+            this.ctx.restore(); // Restore state after drawing each enemy
         });
     }
 
     drawUFO(ufo) {
-        this.ctx.fillStyle = '#888888';
-        this.ctx.fillRect(ufo.x, ufo.y + ufo.height / 2, ufo.width, ufo.height / 2);
+        // Reset any potentially problematic context properties
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowColor = "transparent";
+        this.ctx.globalAlpha = 1.0;
+        this.ctx.lineWidth = 1;
+        
+        const x = ufo.x;
+        const y = ufo.y;
+        const width = ufo.width;
+        const height = ufo.height;
+        const centerX = x + width/2;
+        const centerY = y + height/2;
+        
+        // Draw a more interesting saucer shape
+        
+        // Bottom dish
+        this.ctx.fillStyle = '#666666';
         this.ctx.beginPath();
-        this.ctx.arc(
-            ufo.x + ufo.width / 2,
-            ufo.y + ufo.height / 2,
-            ufo.width / 2,
-            Math.PI, 2 * Math.PI
-        );
+        this.ctx.ellipse(centerX, centerY + 3, width/2, height/4, 0, 0, Math.PI*2);
         this.ctx.fill();
-
+        
+        // Main saucer body - with gradient for better 3D effect
+        const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
+        gradient.addColorStop(0, '#AAAAAA');
+        gradient.addColorStop(0.5, '#777777');
+        gradient.addColorStop(1, '#444444');
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.beginPath();
+        this.ctx.ellipse(centerX, centerY, width/2, height/3, 0, 0, Math.PI*2);
+        this.ctx.fill();
+        
+        // Top dome
+        this.ctx.fillStyle = '#BBBBBB';
+        this.ctx.beginPath();
+        this.ctx.ellipse(centerX, centerY - 2, width/3, height/5, 0, 0, Math.PI);
+        this.ctx.fill();
+        
+        // Window reflections
         this.ctx.fillStyle = '#00FFFF';
+        
+        // Cockpit window
         this.ctx.beginPath();
-        this.ctx.arc(ufo.x + ufo.width / 2, ufo.y + ufo.height / 2 - 4, 3, 0, Math.PI * 2);
+        this.ctx.ellipse(centerX, centerY - 3, width/6, height/10, 0, 0, Math.PI*2);
         this.ctx.fill();
+        
+        // Side lights - blinking based on frame count
+        const blinkRate = 30;
+        const lightOn = Math.floor(this.game.frameCount / blinkRate) % 2 === 0;
+        
+        this.ctx.fillStyle = lightOn ? '#FF3333' : '#880000';
+        this.ctx.beginPath();
+        this.ctx.arc(x + width*0.2, centerY, 3, 0, Math.PI*2);
+        this.ctx.fill();
+        
+        this.ctx.fillStyle = !lightOn ? '#FF3333' : '#880000';
+        this.ctx.beginPath();
+        this.ctx.arc(x + width*0.8, centerY, 3, 0, Math.PI*2);
+        this.ctx.fill();
+        
+        // Add a subtle glow when the UFO is active (bombing)
+        if (ufo.bombCounter < 500) {
+            this.ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(centerX, centerY + 5, width/2, height/3, 0, 0, Math.PI*2);
+            this.ctx.fill();
+        }
     }
 
     drawBuggy(buggy) {
-        if (buggy.isDashing) {
-            this.ctx.fillStyle = '#550000';
-        } else {
-            this.ctx.fillStyle = '#222222';
-        }
-
-        this.ctx.fillRect(buggy.x, buggy.y, buggy.width, buggy.height);
-
-        this.ctx.fillStyle = '#000000';
+        const x = buggy.x;
+        const y = buggy.y;
+        const width = buggy.width;
+        const height = buggy.height;
+        
+        // Base color changes during dash
+        const baseColor = buggy.isDashing ? '#550000' : '#333333';
+        const detailColor = buggy.isDashing ? '#FF2222' : '#666666';
+        
+        // Improved buggy body
+        this.ctx.fillStyle = baseColor;
+        
+        // Main body - angled like a wedge for more aggressive look
         this.ctx.beginPath();
-        this.ctx.arc(buggy.x + 15, buggy.y + buggy.height, 8, 0, Math.PI * 2);
-        this.ctx.arc(buggy.x + buggy.width - 15, buggy.y + buggy.height, 8, 0, Math.PI * 2);
+        this.ctx.moveTo(x, y + height*0.8);
+        this.ctx.lineTo(x + width*0.2, y);
+        this.ctx.lineTo(x + width, y + height*0.3);
+        this.ctx.lineTo(x + width, y + height*0.8);
+        this.ctx.closePath();
         this.ctx.fill();
-
-        this.ctx.fillStyle = '#666666';
-        this.ctx.fillRect(buggy.x, buggy.y + 5, 10, 10);
-
+        
+        // Detail line along the top
+        this.ctx.strokeStyle = detailColor;
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + width*0.2, y + 2);
+        this.ctx.lineTo(x + width, y + height*0.3 + 2);
+        this.ctx.stroke();
+        
+        // Turret/cannon
+        this.ctx.fillStyle = '#444444';
+        this.ctx.fillRect(x + width*0.7, y - height*0.3, width*0.2, height*0.4);
+        
+        // Window/cockpit
+        this.ctx.fillStyle = buggy.isDashing ? '#FFFF00' : '#33CCFF';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + width*0.25, y + 5);
+        this.ctx.lineTo(x + width*0.45, y + 5);
+        this.ctx.lineTo(x + width*0.5, y + 15);
+        this.ctx.lineTo(x + width*0.2, y + 15);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Wheels with better detail
+        this.ctx.fillStyle = '#000000';
+        
+        // Draw front wheel
+        this.ctx.beginPath();
+        this.ctx.arc(x + width*0.25, y + height, 8, 0, Math.PI*2);
+        this.ctx.fill();
+        
+        // Draw rear wheel
+        this.ctx.beginPath();
+        this.ctx.arc(x + width*0.75, y + height, 8, 0, Math.PI*2);
+        this.ctx.fill();
+        
+        // Wheel details - hubcaps
+        this.ctx.fillStyle = '#555555';
+        this.ctx.beginPath();
+        this.ctx.arc(x + width*0.25, y + height, 3, 0, Math.PI*2);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.arc(x + width*0.75, y + height, 3, 0, Math.PI*2);
+        this.ctx.fill();
+        
+        // Draw dash effect
         if (buggy.isDashing) {
+            // Thruster flames
             this.ctx.fillStyle = '#FF5500';
             this.ctx.beginPath();
-            this.ctx.moveTo(buggy.x - 5, buggy.y + buggy.height - 5);
-            this.ctx.lineTo(buggy.x - 15, buggy.y + buggy.height - 10);
-            this.ctx.lineTo(buggy.x - 10, buggy.y + buggy.height);
+            this.ctx.moveTo(x - 5, y + height*0.5 - 5);
+            this.ctx.lineTo(x - 15, y + height*0.5);
+            this.ctx.lineTo(x - 5, y + height*0.5 + 5);
             this.ctx.closePath();
             this.ctx.fill();
 
+            // Add smoke particles
             this.ctx.fillStyle = 'rgba(100, 100, 100, 0.7)';
             for (let i = 0; i < 3; i++) {
                 const size = 4 + Math.random() * 4;
                 this.ctx.beginPath();
                 this.ctx.arc(
-                    buggy.x - 15 - (Math.random() * 10),
-                    buggy.y + buggy.height - 5 + (Math.random() * 10 - 5),
-                    size, 0, Math.PI * 2
+                    x - 15 - (Math.random() * 10),
+                    y + height*0.5 + (Math.random() * 10 - 5),
+                    size, 0, Math.PI*2
                 );
                 this.ctx.fill();
             }

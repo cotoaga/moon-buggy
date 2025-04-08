@@ -7,39 +7,58 @@ class MineManager {
         
         // Mine storage
         this.mines = [];
+        
+        // Debug flag
+        this.debug = false;
     }
     
-	update(deltaTime) {
-	    for (let i = this.mines.length - 1; i >= 0; i--) {
-	        const mine = this.mines[i];
+    update(deltaTime) {
+        for (let i = this.mines.length - 1; i >= 0; i--) {
+            const mine = this.mines[i];
 
-	        if (!mine.active) {
-	            mine.timer -= deltaTime;
-	            if (mine.timer <= 0) {
-	                mine.active = true;
-	            }
-	        }
+            if (!mine.active) {
+                mine.timer -= deltaTime;
+                if (mine.timer <= 0) {
+                    mine.active = true;
+                    if (this.debug) {
+                        console.log("🔵 Mine activated at", mine.x);
+                    }
+                }
+            }
 
-	        mine.x -= SCROLL_SPEED * deltaTime / 16;
+            // Move mine with scrolling
+            mine.x -= SCROLL_SPEED * deltaTime / 16;
 
-	        if (mine.explode) {
-	            this.game.effects.createExplosion(mine.x, mine.y);
-	            this.mines.splice(i, 1);
-	            continue;
-	        }
+            if (mine.explode) {
+                if (this.game.effects) {
+                    this.game.effects.createExplosion(
+                        mine.x + mine.width/2, 
+                        mine.y + mine.height/2, 
+                        50, // larger explosion
+                        'ground'
+                    );
+                }
+                this.mines.splice(i, 1);
+                continue;
+            }
 
-	        if (mine.x < -50) {
-	            this.mines.splice(i, 1);
-	        }
-	    }
-	}
-	    
+            // Remove mines that go offscreen
+            if (mine.x < -50) {
+                this.mines.splice(i, 1);
+            }
+        }
+    }
+    
     draw() {
-        // Draw player mines (dropped by player)
-        this.mines.forEach(mine => {
+        // Draw player mines
+        this.ctx.save(); // Save current context state
+        
+        for (const mine of this.mines) {
             // Inactive mines are dimmer
             if (!mine.active) {
                 this.ctx.globalAlpha = 0.5;
+            } else {
+                this.ctx.globalAlpha = 1.0;
             }
             
             // Draw mine as a rectangular device with blinking light
@@ -102,21 +121,48 @@ class MineManager {
                     0, Math.PI*2
                 );
                 this.ctx.fill();
+                
+                // Timer indicator
+                const timerPercentage = Math.max(0, Math.min(1, 1 - (mine.timer / 1000)));
+                if (timerPercentage > 0) {
+                    this.ctx.fillStyle = '#3366CC';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(mine.x + mineWidth/2, mine.y + mine.height - mineHeight - 5);
+                    this.ctx.arc(
+                        mine.x + mineWidth/2,
+                        mine.y + mine.height - mineHeight - 5,
+                        6,
+                        -Math.PI/2,
+                        -Math.PI/2 + (Math.PI * 2 * timerPercentage)
+                    );
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                }
             }
-            
-            // Reset alpha
-            this.ctx.globalAlpha = 1.0;
-        });
+        }
+        
+        // Reset context state
+        this.ctx.restore();
     }
     
     addMine(x, y) {
+        // Snap to ground if y position is not specified properly
+        if (y > GAME_HEIGHT - GROUND_HEIGHT || y === undefined) {
+            y = this.terrain.getGroundY(x) - 20;
+        }
+        
+        if (this.debug) {
+            console.log(`Adding mine at (${x}, ${y})`);
+        }
+        
         this.mines.push({
             x: x,
             y: y,
             width: 20,
             height: 20,
             timer: 1000, // Activation timer
-            active: false
+            active: false,
+            explode: false // Flag for explosion state
         });
     }
 }

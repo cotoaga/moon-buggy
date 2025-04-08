@@ -11,6 +11,7 @@ class PlayerWeapons {
         this.mineCooldown = 0;
         this.isShooting = false;
         this.isShootingUp = false;
+        this.debug = false;
 
         // Weapon limits
         this.maxBullets = 10;
@@ -106,27 +107,48 @@ class PlayerWeapons {
     }
 
     dropMine() {
-        const terrain = this.game.terrain;
-        const mines = terrain?.mineManager?.mines;
-
-        if (
-            this.mineCooldown <= 0 &&
-            Array.isArray(mines) &&
-            mines.length < this.maxMines &&
-            this.player.health.energy >= this.mineEnergyCost
-        ) {
-            this.player.health.energy -= this.mineEnergyCost;
-
-            mines.push({
-                x: this.player.x,
-                y: terrain.getGroundY(this.player.x) - 20,
-                width: 20,
-                height: 20,
-                timer: 1000,
-                active: false
-            });
-
-            this.mineCooldown = MINE_COOLDOWN;
+        if (this.mineCooldown > 0) {
+            if (this.debug) console.log("Mine cooldown still active:", this.mineCooldown);
+            return;
+        }
+        
+        if (this.player.health.energy < this.mineEnergyCost) {
+            if (this.debug) console.log("Not enough energy to drop mine:", this.player.health.energy);
+            return;
+        }
+        
+        // Check if we have terrain and mines system
+        if (!this.game.terrain || !this.game.terrain.mineManager) {
+            console.error("Cannot drop mine: terrain or mineManager not available");
+            return;
+        }
+        
+        const mines = this.game.terrain.mineManager.mines;
+        const maxMines = this.maxMines;
+        
+        if (mines.length >= maxMines) {
+            if (this.debug) console.log(`Max mines (${maxMines}) already placed`);
+            return;
+        }
+        
+        // Deduct energy
+        this.player.health.energy -= this.mineEnergyCost;
+        
+        // Calculate position (at player's rear end, on the ground)
+        const x = this.player.x;
+        const y = this.game.terrain.getGroundY(x) - 20;
+        
+        // Add the mine
+        this.game.terrain.mineManager.addMine(x, y);
+        
+        // Set cooldown
+        this.mineCooldown = MINE_COOLDOWN;
+        
+        if (this.debug) console.log(`Mine dropped at (${x}, ${y})`);
+        
+        // Show visual feedback
+        if (this.game.effects) {
+            this.game.effects.createShieldEffect(x, y, 20, 20);
         }
     }
 

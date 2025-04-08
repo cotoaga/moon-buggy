@@ -2,29 +2,80 @@
 class CollisionManager {
     constructor(game) {
         this.game = game;
+        this.debug = false; // Enable for debugging collision issues
     }
 
     checkMineProximity(mine, enemy) {
-        const dx = (mine.x + mine.width / 2) - (enemy.x + enemy.width / 2);
-        const dy = (mine.y + mine.height / 2) - (enemy.y + enemy.height / 2);
+        // Calculate center points for both objects
+        const mineX = mine.x + mine.width / 2;
+        const mineY = mine.y + mine.height / 2;
+        const enemyX = enemy.x + enemy.width / 2;
+        const enemyY = enemy.y + enemy.height / 2;
+        
+        // Calculate distance between centers
+        const dx = mineX - enemyX;
+        const dy = mineY - enemyY;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < MINE_BLAST_RADIUS;
+        
+        // Check if within blast radius
+        const inBlastRadius = distance < MINE_BLAST_RADIUS;
+        
+        if (this.debug && inBlastRadius) {
+            console.log(`Mine at (${mineX}, ${mineY}) detected enemy at (${enemyX}, ${enemyY}), distance: ${distance}`);
+        }
+        
+        return inBlastRadius;
     }
 
     checkMineEnemyCollisions() {
         const mines = this.game.terrain?.mineManager?.mines;
-        const enemies = this.game.enemies?.activeEnemies;
-        if (!mines || !enemies) return;
-
-        for (const mine of mines) {
-            if (!mine.active) continue;
-
-            for (const enemy of enemies) {
-                if (enemy.type === 'buggy' && !enemy.destroyed && this.checkMineProximity(mine, enemy)) {
-                    enemy.destroyed = true;
-                    this.game.effects.createExplosion(enemy.x, enemy.y);
+        const enemies = this.game.enemies?.enemies;
+        
+        if (!mines || !enemies || !Array.isArray(mines) || !Array.isArray(enemies)) {
+            return;
+        }
+        
+        // Only active mines can explode
+        const activeMines = mines.filter(mine => mine.active);
+        
+        for (const mine of activeMines) {
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                
+                if (enemy.destroyed) continue;
+                
+                if (this.checkMineProximity(mine, enemy)) {
+                    // Trigger explosion and destroy enemy
                     mine.explode = true;
-                    console.log('💥 Proximity mine exploded buggy at', enemy.x);
+                    enemy.destroyed = true;
+                    
+                    // Add score
+                    if (enemy.type === 'ufo_high') {
+                        this.game.addScore(75);
+                    } else if (enemy.type === 'ufo_mid') {
+                        this.game.addScore(100);
+                    } else if (enemy.type === 'ufo_low') {
+                        this.game.addScore(150);
+                    } else if (enemy.type === 'buggy') {
+                        this.game.addScore(200);
+                    }
+                    
+                    // Create explosion effect
+                    if (this.game.effects) {
+                        this.game.effects.createExplosion(
+                            enemy.x + enemy.width / 2,
+                            enemy.y + enemy.height / 2,
+                            80,
+                            enemy.type.includes('ufo') ? 'sky' : 'buggy'
+                        );
+                    }
+                    
+                    // Remove the enemy
+                    enemies.splice(i, 1);
+                    
+                    if (this.debug) {
+                        console.log(`💥 Mine exploded enemy of type ${enemy.type}`);
+                    }
                 }
             }
         }
@@ -88,6 +139,8 @@ class CollisionManager {
         const enemies = this.game.enemies.enemies;
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
+            if (enemy.destroyed) continue;
+            
             if (this.isColliding(this.game.player, enemy)) {
                 this.game.addExplosion(
                     enemy.x + enemy.width / 2,
@@ -169,6 +222,8 @@ class CollisionManager {
 
             for (let j = enemies.length - 1; j >= 0; j--) {
                 const enemy = enemies[j];
+                if (enemy.destroyed) continue;
+                
                 if (this.isColliding(bullet, enemy)) {
                     enemy.health--;
                     this.game.addExplosion(

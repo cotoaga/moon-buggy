@@ -56,5 +56,198 @@
     
     <!-- Load game engine last -->
     <script src="js/engine.js"></script>
+	
+	<!-- desperate debug stunt -->
+	
+	<div id="debugPanel" style="display: none; position: fixed; right: 10px; bottom: 10px; background-color: rgba(0,0,0,0.8); border: 1px solid #666; padding: 10px; border-radius: 5px; z-index: 1000; font-family: 'Press Start 2P', monospace; font-size: 10px; color: #0F0;">
+	    <div style="text-align: center; margin-bottom: 5px; color: #FF0;">DEBUG</div>
+	    <div style="display: flex; flex-direction: column; gap: 5px;">
+	        <div>
+	            <label for="levelSelect">Level:</label>
+	            <select id="levelSelect" style="background: #333; color: #0F0; border: 1px solid #0F0;">
+	                <option value="1">1</option>
+	                <option value="2">2</option>
+	                <option value="3">3</option>
+	                <option value="4">4</option>
+	                <option value="5">5</option>
+	                <option value="6">6</option>
+	                <option value="42">42</option>
+	            </select>
+	        </div>
+	        <div>
+	            <label for="sectionProgress">Section Progress:</label>
+	            <input type="range" id="sectionProgress" min="0" max="99" value="0" style="width: 100%;">
+	        </div>
+	        <div>
+	            <label for="addEnemyType">Add Enemy:</label>
+	            <select id="addEnemyType" style="background: #333; color: #0F0; border: 1px solid #0F0;">
+	                <option value="ufo_high">UFO High</option>
+	                <option value="ufo_mid">UFO Mid</option>
+	                <option value="ufo_low">UFO Low</option>
+	                <option value="buggy">Buggy</option>
+	            </select>
+	            <button id="addEnemyBtn" style="background: #333; color: #0F0; border: 1px solid #0F0; margin-left: 5px;">Add</button>
+	        </div>
+	        <div>
+	            <button id="collisionTestBtn" style="background: #333; color: #0F0; border: 1px solid #0F0; width: 100%;">Test Collisions</button>
+	        </div>
+	        <div>
+	            <button id="toggleDebugBtn" style="background: #333; color: #0F0; border: 1px solid #0F0; width: 100%;">Hide Debug</button>
+	        </div>
+	    </div>
+	</div>
+
+	<script>
+	// Debug Mode Control Script
+	(function() {
+	    // Toggle debug panel with Ctrl+D
+	    window.addEventListener('keydown', function(e) {
+	        if (e.key.toLowerCase() === 'd' && e.ctrlKey) {
+	            e.preventDefault();
+	            const debugPanel = document.getElementById('debugPanel');
+	            debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+	        }
+	    });
+    
+	    // Setup debug controls once the game is loaded
+	    window.addEventListener('load', function() {
+	        // Get game instance reference (assuming it's stored in window.game)
+	        let gameInstance = null;
+        
+	        // Wait a bit to ensure game is initialized
+	        setTimeout(() => {
+	            // Try to find the game instance in global scope
+	            // This assumes the game instance is available globally
+	            if (window.game) {
+	                gameInstance = window.game;
+	                console.log("Debug: Found game instance");
+	            } else {
+	                console.warn("Debug: Couldn't find game instance directly");
+	                // Alternative approach - inject the debugger into any Game instance
+	                const originalGameInit = Game.prototype.init;
+	                Game.prototype.init = function() {
+	                    originalGameInit.apply(this, arguments);
+	                    gameInstance = this;
+	                    console.log("Debug: Captured game instance through init");
+	                };
+	            }
+	        }, 1000);
+        
+	        // Level selector
+	        const levelSelect = document.getElementById('levelSelect');
+	        levelSelect.addEventListener('change', function() {
+	            if (!gameInstance) return;
+            
+	            const level = parseInt(this.value);
+	            console.log(`Debug: Setting level to ${level}`);
+            
+	            gameInstance.level = level;
+	            if (gameInstance.levels) {
+	                gameInstance.levels.setLevel(level);
+	            }
+            
+	            // Special case for Level 42
+	            if (level === 42) {
+	                gameInstance.showLevel42EasterEgg();
+	            }
+	        });
+        
+	        // Section progress slider
+	        const sectionProgress = document.getElementById('sectionProgress');
+	        sectionProgress.addEventListener('change', function() {
+	            if (!gameInstance || !gameInstance.terrain) return;
+            
+	            const progress = parseInt(this.value);
+	            console.log(`Debug: Setting section progress to ${progress}%`);
+	            gameInstance.terrain.levelProgress = progress;
+	        });
+        
+	        // Add enemy button
+	        const addEnemyBtn = document.getElementById('addEnemyBtn');
+	        const addEnemyType = document.getElementById('addEnemyType');
+	        addEnemyBtn.addEventListener('click', function() {
+	            if (!gameInstance || !gameInstance.enemies) return;
+            
+	            const enemyType = addEnemyType.value;
+	            console.log(`Debug: Adding enemy of type ${enemyType}`);
+            
+	            switch(enemyType) {
+	                case 'ufo_high':
+	                    gameInstance.enemies.spawnUFO('ufo_high', gameInstance.level);
+	                    break;
+	                case 'ufo_mid':
+	                    gameInstance.enemies.spawnUFO('ufo_mid', gameInstance.level);
+	                    break;
+	                case 'ufo_low':
+	                    gameInstance.enemies.spawnUFO('ufo_low', gameInstance.level);
+	                    break;
+	                case 'buggy':
+	                    gameInstance.enemies.spawnBuggy(gameInstance.level);
+	                    break;
+	            }
+	        });
+        
+	        // Collision test button
+	        const collisionTestBtn = document.getElementById('collisionTestBtn');
+	        collisionTestBtn.addEventListener('click', function() {
+	            if (!gameInstance) return;
+            
+	            console.log("Debug: Running collision tests");
+            
+	            // Enable debug logging in collision manager
+	            if (gameInstance.collision) {
+	                gameInstance.collision.debug = true;
+                
+	                // Add test mine and enemy
+	                if (gameInstance.terrain && gameInstance.terrain.mineManager) {
+	                    const x = gameInstance.player.x + 100;
+	                    const y = gameInstance.terrain.getGroundY(x) - 20;
+                    
+	                    // Add a mine
+	                    gameInstance.terrain.mineManager.addMine(x, y);
+	                    console.log(`Debug: Added test mine at (${x}, ${y})`);
+                    
+	                    // Set it as active immediately
+	                    const mine = gameInstance.terrain.mineManager.mines[gameInstance.terrain.mineManager.mines.length - 1];
+	                    mine.active = true;
+                    
+	                    // Add test enemy near the mine
+	                    if (gameInstance.enemies) {
+	                        const testEnemy = {
+	                            x: x + 40,
+	                            y: y - 20,
+	                            width: 40,
+	                            height: 20,
+	                            type: 'ufo_low',
+	                            health: 1,
+	                            bombCounter: 2000
+	                        };
+	                        gameInstance.enemies.enemies.push(testEnemy);
+	                        console.log(`Debug: Added test enemy near mine`);
+	                    }
+	                }
+                
+	                // Run collision check
+	                setTimeout(() => {
+	                    gameInstance.collision.checkMineEnemyCollisions();
+	                    console.log("Debug: Collision test complete");
+                    
+	                    // Disable debug after test
+	                    setTimeout(() => {
+	                        gameInstance.collision.debug = false;
+	                    }, 2000);
+	                }, 500);
+	            }
+	        });
+        
+	        // Toggle debug panel button
+	        const toggleDebugBtn = document.getElementById('toggleDebugBtn');
+	        toggleDebugBtn.addEventListener('click', function() {
+	            const debugPanel = document.getElementById('debugPanel');
+	            debugPanel.style.display = 'none';
+	        });
+	    });
+	})();
+	</script>
 </body>
 </html>

@@ -117,7 +117,7 @@ class Game {
             const maxDelta = 100; // ms
             const limitedDelta = Math.min(deltaTime, maxDelta);
             
-            // Clear canvas
+            // Clear canvas - MOVED this to be the single source of clearing
             this.ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
             
             if (this.gameRunning && !this.freezeMode) {
@@ -177,9 +177,9 @@ class Game {
     }
     
     drawGame() {
+        // REMOVED duplicate clearRect here - we only need one clear per frame
+        
         // Draw all game components in correct order (back to front)
-		this.ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT); // late addition to get rid of UFO trail. no idea why the other objects work..
-		
         if (this.parallax) {
             this.parallax.draw(this.terrain ? this.terrain.levelProgress : 0);
         }
@@ -189,7 +189,7 @@ class Game {
         }
         
         if (this.enemies) {
-			this.enemies.draw(this.ctx);
+            this.enemies.draw(this.ctx);
         }
         
         if (this.player) {
@@ -274,9 +274,9 @@ class Game {
         // Add message
         dialogContent.innerHTML = `
             <h2 style="color: #33FF33;">LEVEL 42</h2>
-            <p>Maximal unprovability level reached</p>
+            <p>Maximal improbability level reached</p>
             <p>Yes, the result is still: 42</p>
-            <p>Press RERUN to start over reasoning on the universe, life, and everything else calculation.</p>
+            <p>Press RERUN to start over reasoning on the life, the universe, and everything question.</p>
             <button id="rerunButton" style="margin-top: 20px; padding: 10px 20px; background-color: #33FF33; color: black; border: none; cursor: pointer; font-weight: bold; font-size: 16px;">RERUN</button>
         `;
         
@@ -489,4 +489,7 @@ class Game {
 window.onload = function() {
     const game = new Game();
     game.init();
+    
+    // Make game instance available for debug mode
+    window.game = game;
 };
