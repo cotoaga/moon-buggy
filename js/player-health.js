@@ -13,9 +13,9 @@ class PlayerHealth {
         // Energy and shield properties
         this.maxEnergy = 100;
         this.maxShield = 100;
-        this.energyRecoveryRate = 0.2; // per frame
-        this.shieldRecoveryRate = 0.05; // per frame
-        
+        this.energyRecoveryRate = 0.2;
+        this.shieldRecoveryRate = 0.05;
+
         // Death message tracking
         this.deathMessageShown = false;
         this._deathMessageElements = null;
