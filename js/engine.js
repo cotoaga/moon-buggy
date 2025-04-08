@@ -168,7 +168,8 @@ class Game {
         
         // Check for collisions
         if (this.collision) {
-            this.collision.checkCollisions();
+			this.collision.checkMineEnemyCollisions(); // 💣 NEW
+            this.collision.checkCollisions(); // existing collision logic
         }
         
         // Check level progression
@@ -177,6 +178,8 @@ class Game {
     
     drawGame() {
         // Draw all game components in correct order (back to front)
+		this.ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT); // late addition to get rid of UFO trail. no idea why the other objects work..
+		
         if (this.parallax) {
             this.parallax.draw(this.terrain ? this.terrain.levelProgress : 0);
         }
@@ -186,7 +189,7 @@ class Game {
         }
         
         if (this.enemies) {
-            this.enemies.draw();
+			this.enemies.draw(this.ctx);
         }
         
         if (this.player) {

@@ -9,28 +9,31 @@ class MineManager {
         this.mines = [];
     }
     
-    update(deltaTime) {
-        for (let i = this.mines.length - 1; i >= 0; i--) {
-            const mine = this.mines[i];
-            
-            // Update mine timer
-            if (!mine.active) {
-                mine.timer -= deltaTime;
-                if (mine.timer <= 0) {
-                    mine.active = true;
-                }
-            }
-            
-            // Move mine with scrolling
-            mine.x -= SCROLL_SPEED * deltaTime / 16;
-            
-            // Remove mines that scroll off screen
-            if (mine.x < -50) {
-                this.mines.splice(i, 1);
-            }
-        }
-    }
-    
+	update(deltaTime) {
+	    for (let i = this.mines.length - 1; i >= 0; i--) {
+	        const mine = this.mines[i];
+
+	        if (!mine.active) {
+	            mine.timer -= deltaTime;
+	            if (mine.timer <= 0) {
+	                mine.active = true;
+	            }
+	        }
+
+	        mine.x -= SCROLL_SPEED * deltaTime / 16;
+
+	        if (mine.explode) {
+	            this.game.effects.createExplosion(mine.x, mine.y);
+	            this.mines.splice(i, 1);
+	            continue;
+	        }
+
+	        if (mine.x < -50) {
+	            this.mines.splice(i, 1);
+	        }
+	    }
+	}
+	    
     draw() {
         // Draw player mines (dropped by player)
         this.mines.forEach(mine => {
